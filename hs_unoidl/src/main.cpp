@@ -32,6 +32,10 @@
 #include "sal/types.h"
 #include "unoidl/unoidl.hxx"
 
+#include "entity.hxx"
+#include "writer.hxx"
+#include "module.hxx"
+
 using ::rtl::OUString;
 
 namespace {
@@ -141,23 +145,6 @@ OUString decomposeType(
     return nucl;
 }
 
-struct Entity {
-    enum class Sorted { NO, ACTIVE, YES };
-
-    explicit Entity(
-        rtl::Reference<unoidl::Entity> const & theEntity, bool theRelevant):
-        entity(theEntity), relevant(theRelevant), sorted(Sorted::NO),
-        written(false)
-    {}
-
-    rtl::Reference<unoidl::Entity> const entity;
-    std::set<OUString> dependencies;
-    std::set<OUString> interfaceDependencies;
-    bool relevant;
-    Sorted sorted;
-    bool written;
-};
-
 void insertEntityDependency(
     rtl::Reference<unoidl::Manager> const & manager,
     std::map<OUString, Entity>::iterator const & iterator,
@@ -244,17 +231,12 @@ void scanMap(
                 static_cast<unoidl::ModuleEntity *>(ent.get())->createCursor(),
                 published, name + ".", entities);
         } else {
+            Module m (name);
+            Entity x (ent, m, id, (!published
+                        || (static_cast<unoidl::PublishableEntity *>(ent.get())
+                            ->isPublished())));
             std::map<OUString, Entity>::iterator i(
-                entities.insert(
-                    std::make_pair(
-                        name,
-                        Entity(
-                            ent,
-                            (!published
-                             || (static_cast<unoidl::PublishableEntity *>(
-                                     ent.get())
-                                 ->isPublished())))))
-                .first);
+                entities.insert(std::make_pair(name, x)).first);
             switch (ent->getSort()) {
             case unoidl::Entity::SORT_MODULE:
                 assert(false && "this cannot happen");
@@ -470,22 +452,12 @@ std::vector<OUString> sort(std::map<OUString, Entity> & entities) {
     return res;
 }
 
-void indent(std::vector<OUString> const & modules, unsigned int extra = 0) {
-    for (std::vector<OUString>::size_type i = 0; i != modules.size(); ++i) {
-        std::cout << ' ';
-    }
-    for (unsigned int i = 0; i != extra; ++i) {
-        std::cout << ' ';
-    }
-}
-
 void closeModules(
     std::vector<OUString> & modules, std::vector<OUString>::size_type n) {
     for (std::vector<OUString>::size_type i = 0; i != n; ++i) {
         assert(!modules.empty());
         modules.pop_back();
-        indent(modules);
-        std::cout << "};\n";
+        // std::cout << "};\n";
     }
 }
 
@@ -499,7 +471,6 @@ OUString openModulesFor(std::vector<OUString> & modules, OUString const & name)
                 modules,
                 static_cast< std::vector<OUString>::size_type >(
                     modules.end() - i));
-            indent(modules);
             return id;
         }
         if (i != modules.end()) {
@@ -513,8 +484,7 @@ OUString openModulesFor(std::vector<OUString> & modules, OUString const & name)
                     modules.end() - i));
             i = modules.end();
         }
-        indent(modules);
-        std::cout << "module " << id << " {\n";
+        // std::cout << "module " << id << " {\n";
         modules.push_back(id);
         i = modules.end();
     }
@@ -643,7 +613,6 @@ void writeEntity(
                          j(ent2->getMembers().begin());
                      j != ent2->getMembers().end(); ++j)
                 {
-                    indent(modules, 1);
                     writeAnnotations(j->annotations);
                     std::cout << j->name << " = " << j->value;
                     if (j + 1 != ent2->getMembers().end()) {
@@ -651,7 +620,6 @@ void writeEntity(
                     }
                     std::cout << '\n';
                 }
-                indent(modules);
                 std::cout << "};\n";
                 break;
             }
@@ -670,12 +638,10 @@ void writeEntity(
                          j(ent2->getDirectMembers().begin());
                      j != ent2->getDirectMembers().end(); ++j)
                 {
-                    indent(modules, 1);
                     writeAnnotations(j->annotations);
                     writeType(j->type);
                     std::cout << ' ' << j->name << ";\n";
                 }
-                indent(modules);
                 std::cout << "};\n";
                 break;
             }
@@ -701,7 +667,6 @@ void writeEntity(
                          j(ent2->getMembers().begin());
                      j != ent2->getMembers().end(); ++j)
                 {
-                    indent(modules, 1);
                     writeAnnotations(j->annotations);
                     if (j->parameterized) {
                         std::cout << j->type;
@@ -710,131 +675,17 @@ void writeEntity(
                     }
                     std::cout << ' ' << j->name << ";\n";
                 }
-                indent(modules);
                 std::cout << "};\n";
                 break;
             }
         case unoidl::Entity::SORT_EXCEPTION_TYPE:
             {
-                rtl::Reference<unoidl::ExceptionTypeEntity> ent2(
-                    static_cast<unoidl::ExceptionTypeEntity *>(ent.get()));
-                writeAnnotationsPublished(ent);
-                std::cout << "exception " << id;
-                if (!ent2->getDirectBase().isEmpty()) {
-                    std::cout << ": ";
-                    writeName(ent2->getDirectBase());
-                }
-                std::cout << " {\n";
-                for (std::vector<unoidl::ExceptionTypeEntity::Member>::const_iterator
-                         j(ent2->getDirectMembers().begin());
-                     j != ent2->getDirectMembers().end(); ++j)
-                {
-                    indent(modules, 1);
-                    writeAnnotations(j->annotations);
-                    writeType(j->type);
-                    std::cout << ' ' << j->name << ";\n";
-                }
-                indent(modules);
-                std::cout << "};\n";
+                writeException(i->second);
                 break;
             }
         case unoidl::Entity::SORT_INTERFACE_TYPE:
             {
-                rtl::Reference<unoidl::InterfaceTypeEntity> ent2(
-                    static_cast<unoidl::InterfaceTypeEntity *>(
-                        ent.get()));
-                writeAnnotationsPublished(ent);
-                std::cout << "interface " << id << " {\n";
-                for (std::vector<unoidl::AnnotatedReference>::const_iterator j(
-                         ent2->getDirectMandatoryBases().begin());
-                     j != ent2->getDirectMandatoryBases().end(); ++j)
-                {
-                    indent(modules, 1);
-                    writeAnnotations(j->annotations);
-                    std::cout << "interface ";
-                    writeName(j->name);
-                    std::cout << ";\n";
-                }
-                for (std::vector<unoidl::AnnotatedReference>::const_iterator j(
-                         ent2->getDirectOptionalBases().begin());
-                     j != ent2->getDirectOptionalBases().end(); ++j)
-                {
-                    indent(modules, 1);
-                    writeAnnotations(j->annotations);
-                    std::cout << "[optional] interface ";
-                    writeName(j->name);
-                    std::cout << ";\n";
-                }
-                for (std::vector<unoidl::InterfaceTypeEntity::Attribute>::const_iterator
-                         j(ent2->getDirectAttributes().begin());
-                     j != ent2->getDirectAttributes().end(); ++j)
-                {
-                    indent(modules, 1);
-                    writeAnnotations(j->annotations);
-                    std::cout << "[attribute";
-                    if (j->bound) {
-                        std::cout << ", bound";
-                    }
-                    if (j->readOnly) {
-                        std::cout << ", readonly";
-                    }
-                    std::cout << "] ";
-                    writeType(j->type);
-                    std::cout << ' ' << j->name;
-                    if (!(j->getExceptions.empty() && j->setExceptions.empty()))
-                    {
-                        std::cout << " {\n";
-                        if (!j->getExceptions.empty()) {
-                            indent(modules, 2);
-                            std::cout << "get";
-                            writeExceptionSpecification(j->getExceptions);
-                            std::cout << ";\n";
-                        }
-                        if (!j->setExceptions.empty()) {
-                            indent(modules, 2);
-                            std::cout << "set";
-                            writeExceptionSpecification(j->setExceptions);
-                            std::cout << ";\n";
-                        }
-                        std::cout << " }";
-                    }
-                    std::cout << ";\n";
-                }
-                for (std::vector<unoidl::InterfaceTypeEntity::Method>::const_iterator
-                         j(ent2->getDirectMethods().begin());
-                     j != ent2->getDirectMethods().end(); ++j)
-                {
-                    indent(modules, 1);
-                    writeAnnotations(j->annotations);
-                    writeType(j->returnType);
-                    std::cout << ' ' << j->name << '(';
-                    for (std::vector<unoidl::InterfaceTypeEntity::Method::Parameter>::const_iterator
-                             k(j->parameters.begin());
-                         k != j->parameters.end(); ++k)
-                    {
-                        if (k != j->parameters.begin()) {
-                            std::cout << ", ";
-                        }
-                        switch (k->direction) {
-                        case unoidl::InterfaceTypeEntity::Method::Parameter::DIRECTION_IN:
-                            std::cout << "[in] ";
-                            break;
-                        case unoidl::InterfaceTypeEntity::Method::Parameter::DIRECTION_OUT:
-                            std::cout << "[out] ";
-                            break;
-                        case unoidl::InterfaceTypeEntity::Method::Parameter::DIRECTION_IN_OUT:
-                            std::cout << "[inout] ";
-                            break;
-                        }
-                        writeType(k->type);
-                        std::cout << ' ' << k->name;
-                    }
-                    std::cout << ')';
-                    writeExceptionSpecification(j->exceptions);
-                    std::cout << ";\n";
-                }
-                indent(modules);
-                std::cout << "};\n";
+                writeInterface(i->second);
                 break;
             }
         case unoidl::Entity::SORT_TYPEDEF:
@@ -857,7 +708,6 @@ void writeEntity(
                          j(ent2->getMembers().begin());
                      j != ent2->getMembers().end(); ++j)
                 {
-                    indent(modules, 1);
                     writeAnnotations(j->annotations);
                     std::cout << "const ";
                     switch (j->value.type) {
@@ -927,7 +777,6 @@ void writeEntity(
                     }
                     std::cout << ";\n";
                 }
-                indent(modules);
                 std::cout << "};\n";
                 break;
             }
@@ -947,7 +796,6 @@ void writeEntity(
                              j(ent2->getConstructors().begin());
                          j != ent2->getConstructors().end(); ++j)
                     {
-                        indent(modules, 1);
                         writeAnnotations(j->annotations);
                         std::cout << j->name << '(';
                         for (std::vector<unoidl::SingleInterfaceBasedServiceEntity::Constructor::Parameter>::const_iterator
@@ -968,7 +816,6 @@ void writeEntity(
                         writeExceptionSpecification(j->exceptions);
                         std::cout << ";\n";
                     }
-                    indent(modules);
                     std::cout << '}';
                 }
                 std::cout << ";\n";
@@ -985,7 +832,6 @@ void writeEntity(
                          ent2->getDirectMandatoryBaseServices().begin());
                      j != ent2->getDirectMandatoryBaseServices().end(); ++j)
                 {
-                    indent(modules, 1);
                     writeAnnotations(j->annotations);
                     std::cout << "service ";
                     writeName(j->name);
@@ -995,7 +841,6 @@ void writeEntity(
                          ent2->getDirectOptionalBaseServices().begin());
                      j != ent2->getDirectOptionalBaseServices().end(); ++j)
                 {
-                    indent(modules, 1);
                     writeAnnotations(j->annotations);
                     std::cout << "[optional] service ";
                     writeName(j->name);
@@ -1005,7 +850,6 @@ void writeEntity(
                          ent2->getDirectMandatoryBaseInterfaces().begin());
                      j != ent2->getDirectMandatoryBaseInterfaces().end(); ++j)
                 {
-                    indent(modules, 1);
                     writeAnnotations(j->annotations);
                     std::cout << "interface ";
                     writeName(j->name);
@@ -1015,7 +859,6 @@ void writeEntity(
                          ent2->getDirectOptionalBaseInterfaces().begin());
                      j != ent2->getDirectOptionalBaseInterfaces().end(); ++j)
                 {
-                    indent(modules, 1);
                     writeAnnotations(j->annotations);
                     std::cout << "[optional] interface ";
                     writeName(j->name);
@@ -1025,7 +868,6 @@ void writeEntity(
                          j(ent2->getDirectProperties().begin());
                      j != ent2->getDirectProperties().end(); ++j)
                 {
-                    indent(modules, 1);
                     writeAnnotations(j->annotations);
                     std::cout << "[property";
                     if ((j->attributes
@@ -1086,7 +928,6 @@ void writeEntity(
                     writeType(j->type);
                     std::cout << ' ' << j->name << ";\n";
                 }
-                indent(modules);
                 std::cout << "};\n";
                 break;
             }
