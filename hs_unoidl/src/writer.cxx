@@ -361,9 +361,9 @@ static void writeExceptionAux (std::ostream & cxx, std::ostream & hxx, std::ostr
             // cxx
             writeExceptionCxxGetter(cxx, name, j->type, j->name);
             // hxx
-            writeExceptionHxxGetter(cxx, name, j->type, j->name);
+            writeExceptionHxxGetter(hxx, name, j->type, j->name);
             // hs
-            writeExceptionHsGetter(cxx, name, j->type, j->name);
+            writeExceptionHsGetter(hs, name, j->type, j->name);
         } else {
             // TODO support for non-primitive types
         }
