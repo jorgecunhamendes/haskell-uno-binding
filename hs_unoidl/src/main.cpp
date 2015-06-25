@@ -973,18 +973,18 @@ SAL_IMPLEMENT_MAIN() {
         }
         rtl::Reference<unoidl::Manager> mgr(new unoidl::Manager);
         rtl::Reference<unoidl::Provider> prov;
+        std::map<OUString, Entity> ents;
         for (sal_uInt32 i = (published ? 1 : 0); i != args; ++i) {
             OUString uri(getArgumentUri(i));
             try {
                 prov = mgr->addProvider(uri);
+                scanMap(mgr, prov->createRootCursor(), published, "", ents);
             } catch (unoidl::NoSuchFileException &) {
                 std::cerr
                     << "Input <" << uri << "> does not exist" << std::endl;
                 std::exit(EXIT_FAILURE);
             }
         }
-        std::map<OUString, Entity> ents;
-        scanMap(mgr, prov->createRootCursor(), published, "", ents);
         std::vector<OUString> sorted(sort(ents));
         std::vector<OUString> mods;
         for (std::vector<OUString>::iterator i(sorted.begin());
