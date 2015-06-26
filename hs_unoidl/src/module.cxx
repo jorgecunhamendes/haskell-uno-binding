@@ -23,7 +23,7 @@ Module::Module (rtl::OUString module) {
     } while (i != -1);
 }
 
-Module Module::createSubModule (OUString const & name) {
+Module Module::createSubModule (OUString const & name) const {
   Module m (this);
   m.names.push_back(name);
   return m;
@@ -41,6 +41,10 @@ OUString Module::getName () const {
 
 OUString Module::getNameCapitalized () const {
     return joinWith(capitalizedNames(), ".");
+}
+
+OUString Module::getLastName () const {
+    return names.back();
 }
 
 OUString Module::asHeaderGuard () const {
@@ -85,7 +89,7 @@ OUString Module::joinWith (std::vector< OUString > strs,
     return buf.makeStringAndClear();
 }
 
-OUString Module::capitalize (OUString const & str) {
+OUString capitalize (OUString const & str) {
     sal_Unicode first (str[0]);
     sal_Unicode capital (first >= 97 && first <= 122 ? first -32 : first);
     return str.replaceAt(0, 1, OUString(capital));

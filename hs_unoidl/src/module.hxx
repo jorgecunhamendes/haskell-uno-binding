@@ -12,15 +12,18 @@
 #include <vector>
 #include "rtl/ustring.hxx"
 
+rtl::OUString capitalize (rtl::OUString const & str);
+
 class Module {
     public:
         Module () : names() {};
-        Module (Module * m) : names(m->names) {};
+        Module (Module const * m) : names(m->names) {};
         Module (rtl::OUString module);
-        Module createSubModule (rtl::OUString const & name);
+        Module createSubModule (rtl::OUString const & name) const;
         Module getParent () const;
         rtl::OUString getName () const;
         rtl::OUString getNameCapitalized () const;
+        rtl::OUString getLastName () const;
         rtl::OUString asHeaderGuard () const;
         rtl::OUString asPath () const;
         rtl::OUString asPathCapitalized () const;
@@ -31,7 +34,6 @@ class Module {
         std::vector< rtl::OUString > capitalizedNames () const;
         static rtl::OUString joinWith (std::vector< rtl::OUString > strs,
                 rtl::OUString const & separator);
-        static rtl::OUString capitalize (rtl::OUString const & str);
 };
 
 #endif /* HSUNOIDL_MODULE_HXX */
