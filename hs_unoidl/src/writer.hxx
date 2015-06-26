@@ -19,5 +19,9 @@ void writeInterface (Entity const & entity);
 
 void writeException (Entity const & entity);
 
+void writeInterfaceBasedSingleton (Entity const & entity);
+
+void writeServiceBasedSingleton (Entity const & entity);
+
 #endif /* HSUNOIDL_WRITER_HXX */
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

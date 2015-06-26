@@ -933,24 +933,12 @@ void writeEntity(
             }
         case unoidl::Entity::SORT_INTERFACE_BASED_SINGLETON:
             {
-                rtl::Reference<unoidl::InterfaceBasedSingletonEntity> ent2(
-                    static_cast<unoidl::InterfaceBasedSingletonEntity *>(
-                        ent.get()));
-                writeAnnotationsPublished(ent);
-                std::cout << "singleton " << id << ": ";
-                writeName(ent2->getBase());
-                std::cout << ";\n";
+                writeInterfaceBasedSingleton(i->second);
                 break;
             }
         case unoidl::Entity::SORT_SERVICE_BASED_SINGLETON:
             {
-                rtl::Reference<unoidl::ServiceBasedSingletonEntity> ent2(
-                    static_cast<unoidl::ServiceBasedSingletonEntity *>(
-                        ent.get()));
-                writeAnnotationsPublished(ent);
-                std::cout << "singleton " << id << " { service ";
-                writeName(ent2->getBase());
-                std::cout << "; };";
+                writeServiceBasedSingleton(i->second);
                 break;
             }
         }

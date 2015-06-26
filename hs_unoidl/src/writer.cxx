@@ -16,6 +16,7 @@
 
 #include "osl/file.hxx"
 #include "osl/process.h"
+#include "rtl/ref.hxx"
 #include "rtl/ustrbuf.hxx"
 
 #include "file.hxx"
@@ -62,6 +63,12 @@ void writeFunctionDeclaration(std::ostream & out,
         std::vector< OUString > const & parameters);
 void writeExceptionHsGetter(std::ostream & hs, OUString const & entityName,
         OUString const & memberType, OUString const & memberName);
+// interface-based singleton functions
+void writeInterfaceBasedSingletonAux (std::ostream & cxx, std::ostream & hxx,
+        std::ostream & hs, Entity const & entity);
+// service-based singleton functions
+void writeServiceBasedSingletonAux (std::ostream & cxx, std::ostream & hxx,
+        std::ostream & hs, Entity const & entity);
 // auxiliary functions
 OUString entityHeaderGuardName (Entity const & entity);
 OUString entityToHeaderGuardName (OUString const & entity);
@@ -88,14 +95,20 @@ void writeInterface (Entity const & entity)
 void writeInterfaceAux (std::ostream & cxx, std::ostream & hxx, std::ostream & hs,
         Entity const & entity)
 {
+    // entity module (including its name)
+    Module eModule = entity.module.createSubModule(entity.name);
+    // entity fully qualified name
+    OUString eFQN (eModule.asNamespace());
+
     rtl::Reference<unoidl::InterfaceTypeEntity> ent (
             static_cast<unoidl::InterfaceTypeEntity *>(entity.entity.get()));
     OUString entityName (entity.name);
-    OUString entityFullName (entity.module.getName() + "." + entityName);
+    OUString entityFullName (eModule.getName());
 
     // cxx
     cxx << "#include \"" << entityName << headerFileExtension << "\"" << std::endl;
-    cxx << "#include \"" << "UNO/Binary.hxx" << "\"" << std::endl;
+    cxx << "#include \"UNO/Binary.hxx\"" << std::endl;
+    cxx << "#include \"rtl/ref.hxx\"" << std::endl;
     cxx << std::endl;
 
     // hxx
@@ -115,7 +128,7 @@ void writeInterfaceAux (std::ostream & cxx, std::ostream & hxx, std::ostream & h
         if (isStringType(j->returnType))
             returnType += " *";
         std::vector<OUString> parameters;
-        parameters.push_back("uno_Interface * iface");
+        parameters.push_back("void * rIface");
         parameters.push_back("uno_Any ** exception");
         for (std::vector<unoidl::InterfaceTypeEntity::Method::Parameter>::const_iterator
                 k(j->parameters.begin()) ;
@@ -132,6 +145,17 @@ void writeInterfaceAux (std::ostream & cxx, std::ostream & hxx, std::ostream & h
         writeFunctionDeclaration(cxx, entityFullName, j->name, returnType, parameters);
         cxx << std::endl;
         cxx << "{" << std::endl;
+        // prepare interface
+        indent(cxx, 4);
+        cxx << "rtl::Reference< " << eFQN << " > * rIface2 ="
+            << "static_cast< rtl::Reference< " << eFQN << " > * >(rIface);"
+            << std::endl;
+        cxx << std::endl;
+        indent(cxx, 4);
+        cxx << "uno_Interface * iface = static_cast< uno_Interface * >(g_cpp2uno.mapInterface("
+            << "rIface2->get(), "
+            << "cppu::UnoType< " << entityFullName << " >::get()"
+            << "))" << std::endl;
         // result type
         indent(cxx, 4);
         if (isStringType(j->returnType)) {
@@ -435,12 +459,125 @@ void writeExceptionHsGetter(std::ostream & hxx, OUString const & entityName,
     hxx << "TODO" << std::endl;
 }
 
+void writeInterfaceBasedSingleton (Entity const & entity)
+{
+    OUString name (entity.name);
+    OUString entityFullName (entity.module.getName() + "." + name);
+    const OUString cxxFileName(name + cxxFileExtension);
+    const OUString hxxFileName(name + hxxFileExtension);
+    const OUString hsFileName(name + hsFileExtension);
+
+    File cxx ("gen/", entity.module.asPathCapitalized(), cxxFileName);
+    File hxx ("gen/", entity.module.asPathCapitalized(), hxxFileName);
+    File hs ("gen/", entity.module.asPathCapitalized(), hsFileName);
+
+    writeInterfaceBasedSingletonAux(cxx, hxx, hs, entity);
+}
+
+void writeInterfaceBasedSingletonAux (std::ostream & cxx, std::ostream & hxx,
+        std::ostream & hs, Entity const & entity)
+{
+    rtl::Reference<unoidl::InterfaceBasedSingletonEntity> ent (
+            static_cast<unoidl::InterfaceBasedSingletonEntity *>(entity.entity.get()));
+    OUString entityName (entity.name);
+    OUString entityFullName (entity.module.getName() + "." + entityName);
+    // entity module (including its name)
+    Module eModule = entity.module.createSubModule(entity.name);
+    // entity fully qualified name
+    OUString eFQN (eModule.asNamespace());
+    // entity base module
+    Module eBaseModule(ent->getBase());
+    // entity base fully qualified name
+    OUString eBaseFQN(eBaseModule.asNamespace());
+
+    // cxx
+    cxx << "#include \"" << entityName << headerFileExtension << "\"" << std::endl;
+    cxx << "#include \"" << "UNO/Binary.hxx" << "\"" << std::endl;
+    cxx << "#include \"" << entity.module.asPath() << "/" << entityName
+        << ".hpp\"" << std::endl;
+    cxx << std::endl;
+    writeFunctionDeclaration(cxx, eModule.getName(), "new", "void *", std::vector< OUString >());
+    cxx << " {" << std::endl;
+    indent(cxx, 4);
+    cxx << "css::uno::Reference< " << eBaseFQN << " > g_expander = "
+        << eFQN << "::get(g_context);" << std::endl;
+
+    cxx << "}" << std::endl;
+
+    // hxx
+    const OUString headerGuardName (entityHeaderGuardName(entity));
+    hxx << "#ifndef " << headerGuardName << std::endl;
+    hxx << "#define " << headerGuardName << std::endl;
+    hxx << std::endl;
+    writeFunctionDeclaration(hxx, eModule.getName(), "new", "void *", std::vector< OUString >());
+    hxx << ";" << std::endl;
+    hxx << std::endl;
+    hxx << "#endif // " << headerGuardName << std::endl;
+
+    // hs
+    hs << "module " << eModule.getNameCapitalized() << " where" << std::endl;
+    hs << std::endl;
+    hs << "import " << eBaseModule.getNameCapitalized() << std::endl;
+    hs << "import UNO.Binary" << std::endl;
+    hs << "import UNO.Service" << std::endl;
+    hs << std::endl;
+    hs << "import Control.Applicative ((<$>))" << std::endl;
+    hs << "import Foreign.Ptr" << std::endl;
+    hs << std::endl;
+    hs << "data " << capitalize(entity.name) << " = " << capitalize(entity.name)
+       << " (Ptr UnoInterface)" << std::endl; // FIXME content should not be a UnoInterface
+    hs << std::endl;
+    hs << "instance Service " << capitalize(entity.name) << " where"
+       << std::endl;
+    hs << "    getInterface (" << capitalize(entity.name) << " ptr) = ptr"
+       << std::endl;
+    hs << std::endl;
+    hs << "instance " << capitalize(eBaseModule.getLastName()) << " "
+       << capitalize(entity.name) << " where" << std::endl;
+    hs << std::endl;
+    hs << entity.name << "New :: IO " << capitalize(entity.name) << std::endl;
+    hs << entity.name << "New = " << capitalize(entity.name) << " <$> c"
+       << capitalize(entity.name) << "_new" << std::endl;
+    hs << std::endl;
+    hs << "foreign import ccall \"" << functionPrefix
+       << toFunctionPrefix(entityFullName) << "_new" << "\" c"
+       << capitalize(entity.name) << "_new" << std::endl;
+    hs << "    :: IO (Ptr UnoInterface)" << std::endl; // FIXME content should not be a UnoInterface
+    hs << std::endl;
+}
+
+void writeServiceBasedSingleton (Entity const & entity)
+{
+    OUString name (entity.name);
+    OUString entityFullName (entity.module.getName() + "." + name);
+    const OUString cxxFileName(name + cxxFileExtension);
+    const OUString hxxFileName(name + hxxFileExtension);
+    const OUString hsFileName(name + hsFileExtension);
+
+    File cxx ("gen/", entity.module.asPathCapitalized(), cxxFileName);
+    File hxx ("gen/", entity.module.asPathCapitalized(), hxxFileName);
+    File hs ("gen/", entity.module.asPathCapitalized(), hsFileName);
+
+    writeServiceBasedSingletonAux(cxx, hxx, hs, entity);
+}
+
+void writeServiceBasedSingletonAux (std::ostream & cxx, std::ostream & hxx,
+        std::ostream & hs, Entity const & entity)
+{
+    rtl::Reference<unoidl::ServiceBasedSingletonEntity> ent (
+            static_cast<unoidl::ServiceBasedSingletonEntity *>(entity.entity.get()));
+    OUString entityName (entity.name);
+    OUString entityFullName (entity.module.getName() + "." + entityName);
+
+    std::cout << "TODO" << std::endl;
+    // TODO
+}
+
 OUString entityHeaderGuardName (Entity const & entity)
 {
     OUStringBuffer buf;
     buf.append(headerGuardPrefix);
-    buf.append(entity.module.asHeaderGuard());
-    buf.append(entity.name.toAsciiUpperCase());
+    buf.append(entity.module.createSubModule(entity.name).asHeaderGuard());
     buf.append(headerGuardSuffix);
     return buf.makeStringAndClear();
 }
