@@ -19,8 +19,7 @@ Module::Module (rtl::OUString module) {
     sal_Int32 i = 0;
     do {
         OUString id(module.getToken(0, '.', i));
-        if (i != -1)
-            names.push_back(id);
+        names.push_back(id);
     } while (i != -1);
 }
 
@@ -28,6 +27,12 @@ Module Module::createSubModule (OUString const & name) {
   Module m (this);
   m.names.push_back(name);
   return m;
+}
+
+Module Module::getParent () const {
+    Module m (this);
+    m.names.pop_back();
+    return m;
 }
 
 OUString Module::getName () const {

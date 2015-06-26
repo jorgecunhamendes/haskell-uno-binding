@@ -18,6 +18,7 @@ class Module {
         Module (Module * m) : names(m->names) {};
         Module (rtl::OUString module);
         Module createSubModule (rtl::OUString const & name);
+        Module getParent () const;
         rtl::OUString getName () const;
         rtl::OUString getNameCapitalized () const;
         rtl::OUString asHeaderGuard () const;

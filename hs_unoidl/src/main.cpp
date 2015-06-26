@@ -232,7 +232,7 @@ void scanMap(
                 published, name + ".", entities);
         } else {
             Module m (name);
-            Entity x (ent, m, id, (!published
+            Entity x (ent, m.getParent(), id, (!published
                         || (static_cast<unoidl::PublishableEntity *>(ent.get())
                             ->isPublished())));
             std::map<OUString, Entity>::iterator i(
