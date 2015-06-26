@@ -16,11 +16,13 @@
 
 #include "osl/file.hxx"
 #include "osl/process.h"
+#include "rtl/ustrbuf.hxx"
 
 #include "file.hxx"
 #include "types.hxx"
 
 using rtl::OUString;
+using rtl::OUStringBuffer;
 
 // temp
 extern OUString openModulesFor(std::vector<OUString> & modules, OUString const & name);
@@ -38,14 +40,15 @@ const OUString headerGuardSuffix ("_H");
 const OUString headerFileExtension (".hpp");
 const OUString hsModulePrefix ("LibreOffice.");
 
-// local functions
+// LOCAL FUNCTIONS
+// interface functions
 void writeInterfaceAux (std::ostream & cxx, std::ostream & hxx, std::ostream & hs,
-        rtl::OUString const & entityFullName, rtl::OUString const & name,
-        rtl::Reference<unoidl::InterfaceTypeEntity> entity);
+        Entity const & entity);
 void writeInterfaceHsForeignImports (std::ostream & hs,
         rtl::OUString const & entityName, rtl::Reference<unoidl::InterfaceTypeEntity> entity);
 void writeInterfaceHsMethods (std::ostream & hs,
         rtl::OUString const & entityName, rtl::Reference<unoidl::InterfaceTypeEntity> entity);
+// exception functions
 static void writeExceptionAux (std::ostream & cxx, std::ostream & hxx, std::ostream & hs,
         rtl::OUString const & name, rtl::Reference<unoidl::ExceptionTypeEntity> entity);
 void writeExceptionCxxGetter(std::ostream & cxx, OUString const & entityName,
@@ -59,6 +62,8 @@ void writeFunctionDeclaration(std::ostream & out,
         std::vector< OUString > const & parameters);
 void writeExceptionHsGetter(std::ostream & hs, OUString const & entityName,
         OUString const & memberType, OUString const & memberName);
+// auxiliary functions
+OUString entityHeaderGuardName (Entity const & entity);
 OUString entityToHeaderGuardName (OUString const & entity);
 OUString entityToHeaderFileName (OUString const & entity);
 OUString entityToFileName (OUString const & entity);
@@ -77,24 +82,24 @@ void writeInterface (Entity const & entity)
     File hxx ("gen/", entity.module.asPathCapitalized(), hxxFileName);
     File hs ("gen/", entity.module.asPathCapitalized(), hsFileName);
 
-    rtl::Reference<unoidl::InterfaceTypeEntity> ent2(
-            static_cast<unoidl::InterfaceTypeEntity *>(entity.entity.get()));
-    writeInterfaceAux(cxx, hxx, hs, entityFullName, name, ent2);
+    writeInterfaceAux(cxx, hxx, hs, entity);
 }
 
 void writeInterfaceAux (std::ostream & cxx, std::ostream & hxx, std::ostream & hs,
-        rtl::OUString const & entityFullName, rtl::OUString const & entityName,
-        rtl::Reference<unoidl::InterfaceTypeEntity> entity)
+        Entity const & entity)
 {
+    rtl::Reference<unoidl::InterfaceTypeEntity> ent (
+            static_cast<unoidl::InterfaceTypeEntity *>(entity.entity.get()));
+    OUString entityName (entity.name);
+    OUString entityFullName (entity.module.getName() + "." + entityName);
+
     // cxx
-    cxx << "#include \"" << entityName << headerFileExtension << "\"" << std::endl; // TODO
+    cxx << "#include \"" << entityName << headerFileExtension << "\"" << std::endl;
     cxx << "#include \"" << "UNO/Binary.hxx" << "\"" << std::endl;
     cxx << std::endl;
 
     // hxx
-    const OUString headerGuardName (headerGuardPrefix +
-            entityToHeaderGuardName(entityFullName) +
-            headerGuardSuffix);
+    const OUString headerGuardName (entityHeaderGuardName(entity));
     hxx << "#ifndef " << headerGuardName << std::endl;
     hxx << "#define " << headerGuardName << std::endl;
     hxx << std::endl;
@@ -103,8 +108,8 @@ void writeInterfaceAux (std::ostream & cxx, std::ostream & hxx, std::ostream & h
     hxx << "#include \"uno/mapping.hxx\"" << std::endl;
     hxx << std::endl;
     for (std::vector<unoidl::InterfaceTypeEntity::Method>::const_iterator
-            j(entity->getDirectMethods().begin());
-            j != entity->getDirectMethods().end(); ++j)
+            j(ent->getDirectMethods().begin());
+            j != ent->getDirectMethods().end(); ++j)
     {
         OUString returnType (toCppType(j->returnType));
         if (isStringType(j->returnType))
@@ -189,11 +194,11 @@ void writeInterfaceAux (std::ostream & cxx, std::ostream & hxx, std::ostream & h
     hs << "import Foreign" << std::endl;
     hs << std::endl;
 
-    writeInterfaceHsForeignImports (hs, entityName, entity);
+    writeInterfaceHsForeignImports (hs, entityName, ent);
     hs << std::endl;
 
     hs << "class Service a => " << entityName << " a where" << std::endl;
-    writeInterfaceHsMethods (hs, entityName, entity);
+    writeInterfaceHsMethods (hs, entityName, ent);
 }
 
 void writeInterfaceHsForeignImports (std::ostream & hs,
@@ -428,6 +433,16 @@ void writeExceptionHsGetter(std::ostream & hxx, OUString const & entityName,
         OUString const & memberType, OUString const & memberName)
 {
     hxx << "TODO" << std::endl;
+}
+
+OUString entityHeaderGuardName (Entity const & entity)
+{
+    OUStringBuffer buf;
+    buf.append(headerGuardPrefix);
+    buf.append(entity.module.asHeaderGuard());
+    buf.append(entity.name.toAsciiUpperCase());
+    buf.append(headerGuardSuffix);
+    return buf.makeStringAndClear();
 }
 
 OUString entityToHeaderGuardName (OUString const & entity)
