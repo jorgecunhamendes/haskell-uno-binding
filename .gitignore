@@ -1,3 +1,6 @@
 .*.swp
 /hs_unoidl/out
 /hs_unoidl/hs_unoidl
+.cabal-sandbox
+cabal.sandbox.config
+dist/
