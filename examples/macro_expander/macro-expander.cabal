@@ -1,0 +1,28 @@
+name:                macro-expander
+version:             0.1.0.0
+synopsis:            Expand macros using the UNO macro expander.
+description:         This is an example of the usage of the Haskell UNO
+                     bindings.
+license:             MPL-2.0
+license-file:        LICENSE
+author:              Jorge Mendes
+maintainer:          jorgecunhamendes@gmail.com
+-- copyright:           
+-- category:            
+build-type:          Custom
+-- extra-source-files:  
+cabal-version:       >=1.10
+extra-tmp-files:     gen
+
+executable macro-expander
+  main-is:             Main.hs
+  -- other-modules:       
+  other-extensions:    OverloadedStrings
+  build-depends:       base >=4.6
+                     , text
+                     , hs-uno
+  -- hs-source-dirs:      
+  default-language:    Haskell2010
+  x-lo-sdk-types:
+    com.sun.star.util.theMacroExpander
+    com.sun.star.util.XMacroExpander
