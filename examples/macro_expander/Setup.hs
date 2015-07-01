@@ -1,6 +1,6 @@
 import Distribution.Simple
 
-import Distribution.PackageDescription (PackageDescription (..), Library (..), BuildInfo (..))
+import Distribution.PackageDescription (PackageDescription (..), Library (..), Executable (..), BuildInfo (..))
 import Distribution.Simple.LocalBuildInfo (LocalBuildInfo (..))
 import Distribution.Simple.Utils (die)
 
@@ -9,7 +9,7 @@ import Data.List (intercalate)
 import Data.Maybe (fromJust, isNothing)
 import System.Directory (createDirectoryIfMissing, doesFileExist, getCurrentDirectory)
 import System.Environment (lookupEnv)
-import System.FilePath ((</>))
+import System.FilePath ((</>), (<.>))
 import System.Process (system)
 
 main :: IO ()
@@ -35,29 +35,24 @@ myConfHook (pkg0, pbi) flags = do
     let loInstallDir = fromJust mLoInstallDir
         builddir     = currentDir </> buildDir lbi
         lpd          = localPkgDescr lbi
-        lib          = fromJust (library lpd)
-        libbi        = libBuildInfo lib
-        custom_bi    = customFieldsBI libbi
+        exe          = head (executables lpd)
+        exebi        = buildInfo exe
+        custom_bi    = customFieldsBI exebi
         lo_types     = (lines . fromJust) (lookup "x-lo-sdk-types" custom_bi)
     -- Generate needed types
-    putStrLn ("library: " ++ show (library lpd))
     putStrLn ("LO SDK Types: " ++ show (lookup "x-lo-sdk-types" custom_bi))
-    makeTypes builddir lo_types
+    makeTypes loInstallDir builddir lo_types
     --
-    let libbi' = libbi
-          { extraLibDirs = extraLibDirs libbi
-          , extraLibs    = extraLibs    libbi
-          , ldOptions    = ldOptions    libbi
-          , frameworks   = frameworks   libbi
-          , includeDirs  = includeDirs  libbi ++
+    let exebi' = exebi
+          { includeDirs  = includeDirs  exebi ++
               [ cpputypesInclude builddir
               , loInstallDir </> "sdk" </> "include"
               ]
-          , ccOptions    = ccOptions    libbi ++ loCxxOptions
+          , ccOptions    = ccOptions    exebi ++ loCxxOptions
           }
  
-    let lib' = lib { libBuildInfo = libbi' }
-    let lpd' = lpd { library = Just lib', extraSrcFiles = "gen" : (extraSrcFiles lpd) }
+    let exe' = exe { buildInfo = exebi' }
+    let lpd' = lpd { executables = [exe'], extraSrcFiles = "gen" : (extraSrcFiles lpd) }
     --
     return $ lbi { localPkgDescr = lpd' }
 
@@ -67,8 +62,8 @@ cxxTypesFlag = "cpputypes.cppumaker.flag"
 hsTypesFlag :: String
 hsTypesFlag = "hstypes.hs_unoidl.flag"
 
-makeTypes :: FilePath -> [String] -> IO ()
-makeTypes builddir types = do
+makeTypes :: FilePath -> FilePath -> [String] -> IO ()
+makeTypes loInstallDir builddir types = do
     let cxxTypesFlagFile = builddir </> cxxTypesFlag
         hsTypesFlagFile = builddir </> hsTypesFlag
     cxxTypesMade <- doesFileExist cxxTypesFlagFile
@@ -89,7 +84,7 @@ makeTypes builddir types = do
             typedb = "$LO_INSTDIR/program/types.rdb"
         putStrLn "Building required LibreOffice SDK Haskell types"
         createDirectoryIfMissing True out
-        hs_unoidl typedb typelist
+        hs_unoidl loInstallDir typelist
         touch hsTypesFlagFile
     return ()
 
@@ -98,10 +93,25 @@ cppumaker out typelist typedb = void $ system ("$LO_INSTDIR/sdk/bin/cppumaker " 
   where args = unwords $ map quote [out, typelist, typedb]
         quote s = "\"" ++ s ++ "\""
 
-hs_unoidl :: String -> String -> IO ()
-hs_unoidl typelist typedb = void $ system (hs_unoidl_path ++ ' ' : args)
-  where args = unwords $ map quote [typelist, typedb]
+hs_unoidl :: FilePath -> String -> IO ()
+hs_unoidl loInstallDir typelist = void $ putStrLn (cmd ++ ' ' : args) >> system (cmd ++ ' ' : args)
+  where cmd = "LD_LIBRARY_PATH='"
+              ++ loInstallDir ++ "/program' " ++ hs_unoidl_path
+        args = unwords (basepath : typepaths)
+        basepath = loInstallDir </> "sdk" </> "idl"
+        typepaths = map quote
+                    $ map (unoTypeToPath basepath)
+                    $ words typelist
         quote s = "\"" ++ s ++ "\""
 
 touch :: FilePath -> IO ()
 touch path = void $ system ("touch \"" ++ path ++ "\"")
+
+unoTypeToPath :: FilePath -> String -> FilePath
+unoTypeToPath basepath t = basepath </> tpath <.> "idl"
+  where tpath = replace '.' '/' t -- FIXME split on points and join using </>
+
+replace :: Char -> Char -> String -> String
+replace c0 c1 = map aux
+  where aux c' | c' == c0 = c1
+               | otherwise = c'
