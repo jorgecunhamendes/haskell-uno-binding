@@ -85,9 +85,9 @@ void writeInterface (Entity const & entity)
     const OUString hxxFileName(name + hxxFileExtension);
     const OUString hsFileName(name + hsFileExtension);
 
-    File cxx ("gen/", entity.module.asPathCapitalized(), cxxFileName);
-    File hxx ("gen/", entity.module.asPathCapitalized(), hxxFileName);
-    File hs ("gen/", entity.module.asPathCapitalized(), hsFileName);
+    File cxx ("gen/", entity.module.asPathCapitalized(), capitalize(cxxFileName));
+    File hxx ("gen/", entity.module.asPathCapitalized(), capitalize(hxxFileName));
+    File hs ("gen/", entity.module.asPathCapitalized(), capitalize(hsFileName));
 
     writeInterfaceAux(cxx, hxx, hs, entity);
 }
@@ -106,7 +106,8 @@ void writeInterfaceAux (std::ostream & cxx, std::ostream & hxx, std::ostream & h
     OUString entityFullName (eModule.getName());
 
     // cxx
-    cxx << "#include \"" << entityName << headerFileExtension << "\"" << std::endl;
+    cxx << "#include \"" << capitalize(entityName) << headerFileExtension
+        << "\"" << std::endl;
     cxx << "#include \"UNO/Binary.hxx\"" << std::endl;
     cxx << "#include \"rtl/ref.hxx\"" << std::endl;
     cxx << std::endl;
@@ -117,7 +118,7 @@ void writeInterfaceAux (std::ostream & cxx, std::ostream & hxx, std::ostream & h
     hxx << "#define " << headerGuardName << std::endl;
     hxx << std::endl;
     hxx << "#include \"rtl/ustring.hxx\"" << std::endl;
-    hxx << "#include \"uno/any2.hxx\"" << std::endl;
+    hxx << "#include \"uno/any2.h\"" << std::endl;
     hxx << "#include \"uno/mapping.hxx\"" << std::endl;
     hxx << std::endl;
     for (std::vector<unoidl::InterfaceTypeEntity::Method>::const_iterator
@@ -154,8 +155,8 @@ void writeInterfaceAux (std::ostream & cxx, std::ostream & hxx, std::ostream & h
         indent(cxx, 4);
         cxx << "uno_Interface * iface = static_cast< uno_Interface * >(g_cpp2uno.mapInterface("
             << "rIface2->get(), "
-            << "cppu::UnoType< " << entityFullName << " >::get()"
-            << "))" << std::endl;
+            << "cppu::UnoType< " << eFQN << " >::get()"
+            << "));" << std::endl;
         // result type
         indent(cxx, 4);
         if (isStringType(j->returnType)) {
@@ -175,9 +176,9 @@ void writeInterfaceAux (std::ostream & cxx, std::ostream & hxx, std::ostream & h
             indent(cxx, 4);
             cxx << "args[" << argIdx << "] = ";
             if (isStringType(k->type)) {
-                cxx << "const_cast<rtl_uString **>(&" << k->name << "->pData)" << std::endl;
+                cxx << "const_cast<rtl_uString **>(&" << k->name << "->pData);" << std::endl;
             } else if (isPrimitiveType(k->type)) {
-                cxx << "&" << j->name << std::endl;
+                cxx << "&" << j->name << ";" << std::endl;
             } else {
                 // TODO non-primitive types
             }
@@ -205,14 +206,11 @@ void writeInterfaceAux (std::ostream & cxx, std::ostream & hxx, std::ostream & h
 
     // hs
     // TODO create correct module name
-    hs << "module " << hsModulePrefix << "TODO" << " where" << std::endl;
+    hs << "module " << eModule.getNameCapitalized() << " where" << std::endl;
     hs << std::endl;
-    hs << "import SAL.Types" << std::endl;
-    hs << "import UNO.Binary" << std::endl;
-    hs << "import UNO.Service" << std::endl;
-    hs << "import Text" << std::endl;
+    hs << "import UNO" << std::endl;
     hs << std::endl;
-    hs << "import qualified Control.Exception E" << std::endl;
+    hs << "import qualified Control.Exception as E" << std::endl;
     hs << "import Control.Monad" << std::endl;
     hs << "import Data.Text (Text)" << std::endl;
     hs << "import Foreign" << std::endl;
@@ -232,7 +230,7 @@ void writeInterfaceHsForeignImports (std::ostream & hs,
             j(entity->getDirectMethods().begin());
             j != entity->getDirectMethods().end(); ++j)
     {
-        OUString cMethodName (j->name);
+        OUString cMethodName (j->name); // FIXME Incorrect name. See C function generation.
         hs << "foreign import ccall \"" << cMethodName << "\" c" << j->name << std::endl;
         // method type
         indent(hs, 4);
@@ -310,7 +308,7 @@ void writeInterfaceHsMethods (std::ostream & hs,
         hs << "with nullPtr $ \\ exceptionPtr -> do" << std::endl;
         // run method
         indent(hs, 12);
-        hs << "result <- c" << j->name << " iface";
+        hs << "result <- c" << j->name << " iface exceptionPtr";
         for (std::vector< OUString >::const_iterator
                 k(arguments.begin()); k != arguments.end(); ++k)
         {
@@ -356,9 +354,9 @@ void writeException (Entity const & entity)
     const OUString hxxFileName(name + hxxFileExtension);
     const OUString hsFileName(name + hsFileExtension);
 
-    File cxx ("gen/", entity.module.asPathCapitalized(), cxxFileName);
-    File hxx ("gen/", entity.module.asPathCapitalized(), hxxFileName);
-    File hs ("gen/", entity.module.asPathCapitalized(), hsFileName);
+    File cxx ("gen/", entity.module.asPathCapitalized(), capitalize(cxxFileName));
+    File hxx ("gen/", entity.module.asPathCapitalized(), capitalize(hxxFileName));
+    File hs ("gen/", entity.module.asPathCapitalized(), capitalize(hsFileName));
 
     rtl::Reference<unoidl::ExceptionTypeEntity> ent2(
             static_cast<unoidl::ExceptionTypeEntity *>(entity.entity.get()));
@@ -467,9 +465,9 @@ void writeInterfaceBasedSingleton (Entity const & entity)
     const OUString hxxFileName(name + hxxFileExtension);
     const OUString hsFileName(name + hsFileExtension);
 
-    File cxx ("gen/", entity.module.asPathCapitalized(), cxxFileName);
-    File hxx ("gen/", entity.module.asPathCapitalized(), hxxFileName);
-    File hs ("gen/", entity.module.asPathCapitalized(), hsFileName);
+    File cxx ("gen/", entity.module.asPathCapitalized(), capitalize(cxxFileName));
+    File hxx ("gen/", entity.module.asPathCapitalized(), capitalize(hxxFileName));
+    File hs ("gen/", entity.module.asPathCapitalized(), capitalize(hsFileName));
 
     writeInterfaceBasedSingletonAux(cxx, hxx, hs, entity);
 }
@@ -491,7 +489,8 @@ void writeInterfaceBasedSingletonAux (std::ostream & cxx, std::ostream & hxx,
     OUString eBaseFQN(eBaseModule.asNamespace());
 
     // cxx
-    cxx << "#include \"" << entityName << headerFileExtension << "\"" << std::endl;
+    cxx << "#include \"" << capitalize(entityName) << headerFileExtension
+        << "\"" << std::endl;
     cxx << "#include \"" << "UNO/Binary.hxx" << "\"" << std::endl;
     cxx << "#include \"" << entity.module.asPath() << "/" << entityName
         << ".hpp\"" << std::endl;
@@ -554,9 +553,9 @@ void writeServiceBasedSingleton (Entity const & entity)
     const OUString hxxFileName(name + hxxFileExtension);
     const OUString hsFileName(name + hsFileExtension);
 
-    File cxx ("gen/", entity.module.asPathCapitalized(), cxxFileName);
-    File hxx ("gen/", entity.module.asPathCapitalized(), hxxFileName);
-    File hs ("gen/", entity.module.asPathCapitalized(), hsFileName);
+    File cxx ("gen/", entity.module.asPathCapitalized(), capitalize(cxxFileName));
+    File hxx ("gen/", entity.module.asPathCapitalized(), capitalize(hxxFileName));
+    File hs ("gen/", entity.module.asPathCapitalized(), capitalize(hsFileName));
 
     writeServiceBasedSingletonAux(cxx, hxx, hs, entity);
 }
