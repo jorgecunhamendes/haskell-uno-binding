@@ -1,5 +1,6 @@
 import Distribution.Simple
 
+import Control.Applicative                ((<$>))
 import Control.Monad                      (when, void)
 import Data.List                          (foldl', intercalate, nub, lookup)
 import Data.Maybe                         (fromJust, isNothing)
@@ -22,8 +23,13 @@ import System.Exit                        (exitSuccess, exitFailure)
 main :: IO ()
 main = defaultMainWithHooks simpleUserHooks { confHook = myConfHook }
 
+unoExtraLibs :: [String]
+unoExtraLibs = ["stdc++", "uno_cppu", "uno_cppuhelpergcc3", "uno_sal"]
+
+cpputypesInclude :: FilePath -> FilePath
 cpputypesInclude builddir = builddir </> "include" </> "cpputypes"
 
+loCxxOptions :: [String]
 loCxxOptions = words "-DCPPU_ENV=gcc3 -DHAVE_GCC_VISIBILITY_FEATURE -DLINUX -DUNX"
 
 myConfHook (pkg0, pbi) flags = do
@@ -36,6 +42,8 @@ myConfHook (pkg0, pbi) flags = do
     -- add paths to use the LibreOffice SDK
     let builddir = currentDir </> buildDir lbi
         loInstallDir = fromJust mLoInstallDir
+        unoLibDirs = [ loInstallDir </> "sdk" </> "lib"
+                     , loInstallDir </> "program" ]
     -- generate needed types
     makeTypes builddir
     -- make new local build info
@@ -43,8 +51,8 @@ myConfHook (pkg0, pbi) flags = do
         lib        = fromJust (library lpd)
         libbi      = libBuildInfo lib
         libbi' = libbi
-          { extraLibDirs = extraLibDirs libbi
-          , extraLibs    = extraLibs    libbi
+          { extraLibDirs = extraLibDirs libbi ++ unoLibDirs
+          , extraLibs    = extraLibs    libbi ++ unoExtraLibs
           , ldOptions    = ldOptions    libbi
           , frameworks   = frameworks   libbi
           , includeDirs  = includeDirs  libbi ++
