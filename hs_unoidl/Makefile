@@ -11,6 +11,8 @@
 
 .DELETE_ON_ERROR:
 
+LDPATH=LD_LIBRARY_PATH=$(LO_INSTDIR)/program
+
 .PHONY : build run debug clean
 
 build : hs_unoidl
@@ -23,8 +25,6 @@ debug :
 
 clean :
 	rm -r out
-
-LDPATH=LD_LIBRARY_PATH=$(LO_INSTDIR)/program
 
 OBJECTS= \
 	out/main.cpp_o \
