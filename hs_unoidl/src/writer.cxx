@@ -522,8 +522,7 @@ void writeInterfaceBasedSingletonAux (std::ostream & cxx, std::ostream & hxx,
     hs << "module " << eModule.getNameCapitalized() << " where" << std::endl;
     hs << std::endl;
     hs << "import " << eBaseModule.getNameCapitalized() << std::endl;
-    hs << "import UNO.Binary" << std::endl;
-    hs << "import UNO.Service" << std::endl;
+    hs << "import UNO" << std::endl;
     hs << std::endl;
     hs << "import Control.Applicative ((<$>))" << std::endl;
     hs << "import Foreign.Ptr" << std::endl;
