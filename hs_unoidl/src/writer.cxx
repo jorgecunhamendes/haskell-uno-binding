@@ -45,8 +45,7 @@ const OUString hsModulePrefix ("LibreOffice.");
 // interface functions
 void writeInterfaceAux (std::ostream & cxx, std::ostream & hxx, std::ostream & hs,
         Entity const & entity);
-void writeInterfaceHsForeignImports (std::ostream & hs,
-        rtl::OUString const & entityName, rtl::Reference<unoidl::InterfaceTypeEntity> entity);
+void writeInterfaceHsForeignImports (std::ostream & hs, Entity const & entity);
 void writeInterfaceHsMethods (std::ostream & hs,
         rtl::OUString const & entityName, rtl::Reference<unoidl::InterfaceTypeEntity> entity);
 // exception functions
@@ -216,21 +215,25 @@ void writeInterfaceAux (std::ostream & cxx, std::ostream & hxx, std::ostream & h
     hs << "import Foreign" << std::endl;
     hs << std::endl;
 
-    writeInterfaceHsForeignImports (hs, entityName, ent);
+    writeInterfaceHsForeignImports (hs, entity);
     hs << std::endl;
 
     hs << "class Service a => " << entityName << " a where" << std::endl;
     writeInterfaceHsMethods (hs, entityName, ent);
 }
 
-void writeInterfaceHsForeignImports (std::ostream & hs,
-        rtl::OUString const & entityName, rtl::Reference<unoidl::InterfaceTypeEntity> entity)
+void writeInterfaceHsForeignImports (std::ostream & hs, Entity const & entity)
 {
+    rtl::Reference<unoidl::InterfaceTypeEntity> ent (
+            static_cast<unoidl::InterfaceTypeEntity *>(entity.entity.get()));
+    Module eModule = entity.module.createSubModule(entity.name);
+    OUString entityName (entity.name);
     for (std::vector<unoidl::InterfaceTypeEntity::Method>::const_iterator
-            j(entity->getDirectMethods().begin());
-            j != entity->getDirectMethods().end(); ++j)
+            j(ent->getDirectMethods().begin());
+            j != ent->getDirectMethods().end(); ++j)
     {
-        OUString cMethodName (j->name); // FIXME Incorrect name. See C function generation.
+        OUString cMethodName (functionPrefix +
+                toFunctionPrefix(eModule.getName()) + "_" + j->name);
         hs << "foreign import ccall \"" << cMethodName << "\" c" << j->name << std::endl;
         // method type
         indent(hs, 4);
