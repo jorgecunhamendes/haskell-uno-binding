@@ -2,14 +2,14 @@ import Distribution.Simple
 
 import Distribution.PackageDescription (PackageDescription (..), Library (..), Executable (..), BuildInfo (..))
 import Distribution.Simple.LocalBuildInfo (LocalBuildInfo (..))
-import Distribution.Simple.Utils (die)
+import Distribution.Simple.Utils (die, getDirectoryContentsRecursive)
 
 import Control.Monad (void, when)
 import Data.List (intercalate)
 import Data.Maybe (fromJust, isNothing)
 import System.Directory (createDirectoryIfMissing, doesFileExist, getCurrentDirectory)
 import System.Environment (lookupEnv)
-import System.FilePath ((</>), (<.>))
+import System.FilePath ((</>), (<.>), takeExtension)
 import System.Process (system)
 
 main :: IO ()
@@ -17,7 +17,10 @@ main = defaultMainWithHooks simpleUserHooks { confHook = myConfHook }
 
 hs_unoidl_path = "../../hs_unoidl/hs_unoidl"
 
+unoExtraLibs = ["stdc++", "uno_cppu", "uno_cppuhelpergcc3", "uno_sal"]
+
 cpputypesInclude builddir = builddir </> "include" </> "cpputypes"
+hsunoInclude = "../../hs_uno/src"
 
 loCxxOptions = words "-DCPPU_ENV=gcc3 -DHAVE_GCC_VISIBILITY_FEATURE -DLINUX -DUNX"
 
@@ -33,6 +36,7 @@ myConfHook (pkg0, pbi) flags = do
     lbi <- confHook simpleUserHooks (pkg0, pbi) flags
     -- add paths to use the LibreOffice SDK
     let loInstallDir = fromJust mLoInstallDir
+    let unoLibDirs = [loInstallDir </> "sdk" </> "lib"]
         builddir     = currentDir </> buildDir lbi
         lpd          = localPkgDescr lbi
         exe          = head (executables lpd)
@@ -40,21 +44,32 @@ myConfHook (pkg0, pbi) flags = do
         custom_bi    = customFieldsBI exebi
         lo_types     = (lines . fromJust) (lookup "x-lo-sdk-types" custom_bi)
     -- Generate needed types
-    putStrLn ("LO SDK Types: " ++ show (lookup "x-lo-sdk-types" custom_bi))
     makeTypes loInstallDir builddir lo_types
     --
+    cxxFilePaths <- findGeneratedCxxFiles
     let exebi' = exebi
-          { includeDirs  = includeDirs  exebi ++
+          { hsSourceDirs = hsSourceDirs exebi ++ ["gen"]
+          , cSources     = cxxFilePaths
+          , includeDirs  = includeDirs  exebi ++
               [ cpputypesInclude builddir
               , loInstallDir </> "sdk" </> "include"
+              , hsunoInclude
+              , "gen"
               ]
           , ccOptions    = ccOptions    exebi ++ loCxxOptions
+          , extraLibDirs = extraLibDirs exebi ++ unoLibDirs
+          , extraLibs    = extraLibs    exebi ++ unoExtraLibs
           }
- 
     let exe' = exe { buildInfo = exebi' }
     let lpd' = lpd { executables = [exe'], extraSrcFiles = "gen" : (extraSrcFiles lpd) }
     --
     return $ lbi { localPkgDescr = lpd' }
+
+findGeneratedCxxFiles :: IO [FilePath]
+findGeneratedCxxFiles = do
+  files <- getDirectoryContentsRecursive "gen"
+  let cxxFiles = filter ((== ".cpp") . takeExtension) files
+  return (map ("gen" </>) cxxFiles)
 
 cxxTypesFlag :: String
 cxxTypesFlag = "cpputypes.cppumaker.flag"
@@ -94,7 +109,7 @@ cppumaker out typelist typedb = void $ system ("$LO_INSTDIR/sdk/bin/cppumaker " 
         quote s = "\"" ++ s ++ "\""
 
 hs_unoidl :: FilePath -> String -> IO ()
-hs_unoidl loInstallDir typelist = void $ putStrLn (cmd ++ ' ' : args) >> system (cmd ++ ' ' : args)
+hs_unoidl loInstallDir typelist = void $ system (cmd ++ ' ' : args)
   where cmd = "LD_LIBRARY_PATH='"
               ++ loInstallDir ++ "/program' " ++ hs_unoidl_path
         args = unwords (basepath : typepaths)
