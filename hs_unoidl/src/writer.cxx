@@ -147,8 +147,8 @@ void writeInterfaceAux (std::ostream & cxx, std::ostream & hxx, std::ostream & h
         cxx << "{" << std::endl;
         // prepare interface
         indent(cxx, 4);
-        cxx << "rtl::Reference< " << eFQN << " > * rIface2 ="
-            << "static_cast< rtl::Reference< " << eFQN << " > * >(rIface);"
+        cxx << "css::uno::Reference< " << eFQN << " > * rIface2 ="
+            << "static_cast< css::uno::Reference< " << eFQN << " > * >(rIface);"
             << std::endl;
         cxx << std::endl;
         indent(cxx, 4);
@@ -501,9 +501,11 @@ void writeInterfaceBasedSingletonAux (std::ostream & cxx, std::ostream & hxx,
     writeFunctionDeclaration(cxx, eModule.getName(), "new", "void *", std::vector< OUString >());
     cxx << " {" << std::endl;
     indent(cxx, 4);
-    cxx << "css::uno::Reference< " << eBaseFQN << " > g_expander = "
-        << eFQN << "::get(g_context);" << std::endl;
-
+    cxx << "css::uno::Reference< " << eBaseFQN << " > * r = new "
+        << "css::uno::Reference< " << eBaseFQN << " >("
+        << eFQN << "::get(g_context));" << std::endl;
+    indent(cxx, 4);
+    cxx << "return static_cast< void * >(r);" << std::endl;
     cxx << "}" << std::endl;
 
     // hxx
