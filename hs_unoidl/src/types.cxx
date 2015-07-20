@@ -10,29 +10,58 @@
 
 #include <iostream>
 
+#include "module.hxx"
+#include "utils.hxx"
+
 using rtl::OUString;
 
-bool isPrimitiveType (OUString const & name)
-{
-    return (name == "bool" ||
-            name == "char" ||
-            name == "byte" ||
-            name == "short" ||
-            name == "long" ||
-            name == "hyper" ||
-            name == "float" ||
-            name == "double" ||
-            name == "string");
+bool isHsUnoType (OUString const & type) {
+    return (type.compareTo("hsuno", 5) == 0);
 }
 
-bool isStringType (OUString const & name)
-{
-    return (name == "string");
+bool isBasicType (OUString const & type) {
+    return (type == "void"
+            || type == "boolean"
+            || type == "byte"
+            || type == "short"
+            || type == "unsigned short"
+            || type == "long"
+            || type == "unsigned long"
+            || type == "hyper"
+            || type == "unsigned hyper"
+            || type == "float"
+            || type == "double"
+            || type == "char");
+}
+
+bool isSimpleType (OUString const & type) {
+    return (isBasicType(type)
+            || type == "string"
+            || type == "type"
+            || type == "any");
+}
+
+bool isPrimitiveType (OUString const & type) {
+    return ((isSimpleType(type) && type != "any")
+            || type == "enum");
+}
+
+bool isStringType (OUString const & type) {
+    return (type == "string");
+}
+
+bool isSequenceType (OUString const & type) {
+    return (type.compareTo("[]", 2) == 0);
 }
 
 OUString toCppType (OUString const & name)
 {
-    if (name == "bool") return OUString("bool");
+    if (name.compareTo("hsuno ", 6) == 0)
+        return name.copy(6);
+    if (name == "hsuno_interface") return OUString("void *");
+    if (name == "hsuno_exception_ptr") return OUString("uno_Any **");
+    if (name == "void") return OUString("void");
+    if (name == "boolean") return OUString("bool");
     if (name == "char") return OUString("sal_Int8");
     if (name == "short") return OUString("sal_Int16");
     if (name == "long") return OUString("sal_Int32");
@@ -40,12 +69,23 @@ OUString toCppType (OUString const & name)
     if (name == "float") return OUString("float");
     if (name == "double") return OUString("double");
     if (name == "string") return OUString("rtl::OUString");
-    return name.replaceAll(".","::");
+    if (name == "type") return OUString("::css::uno::Type");
+    if (name == "any") return OUString("uno_Any");
+    OUString result;
+    if (isSequenceType(name)) {
+        result = "css::uno::Sequence< " + toCppType(name.copy(2)) + " >";
+    } else {
+        result = name.replaceAll(".","::");
+    }
+    return result;
 }
 
 OUString toHsType (OUString const & name)
 {
-    if (name == "bool") return OUString("Bool");
+    if (name.compareTo("hsuno ", 6) == 0)
+        return name.copy(6);
+    if (name == "void") return OUString("()");
+    if (name == "boolean") return OUString("Bool");
     if (name == "char") return OUString("Int8");
     if (name == "short") return OUString("Int16");
     if (name == "long") return OUString("Int32");
@@ -53,12 +93,22 @@ OUString toHsType (OUString const & name)
     if (name == "float") return OUString("Float");
     if (name == "double") return OUString("Double");
     if (name == "string") return OUString("Text");
-    return name;
+    if (name == "type") return OUString("TypeDescription");
+    OUString result;
+    if (isSequenceType(name)) {
+        result = "(Sequence " + toHsType(name.copy(2)) + ")";
+    } else {
+        result = Module(name).getNameCapitalized() + "Ref";
+    }
+    return result;
 }
 
 OUString toHsCppType (OUString const & name)
 {
-    if (name == "bool") return OUString("Bool");
+    if (name == "hsuno_interface") return OUString("UnoInterface");
+    if (name == "hsuno_exception_ptr") return OUString("(Ptr Any)");
+    if (name == "void") return OUString("()");
+    if (name == "boolean") return OUString("Bool");
     if (name == "char") return OUString("Int8");
     if (name == "short") return OUString("Int16");
     if (name == "long") return OUString("Int32");
@@ -66,12 +116,20 @@ OUString toHsCppType (OUString const & name)
     if (name == "float") return OUString("Float");
     if (name == "double") return OUString("Double");
     if (name == "string") return OUString("OUString");
-    return name;
+    if (name == "type") return OUString("CssUnoType");
+    if (name == "any") return OUString("AnyRef");
+    OUString result;
+    if (isSequenceType(name)) {
+        result = "(Sequence " + toHsCppType(name.copy(2)) + ")";
+    } else {
+        result = Module(name).getNameCapitalized() + "Ref";
+    }
+    return result;
 }
 
 OUString hsTypeCxxPrefix (OUString const & type)
 {
-    if (type == "bool") return OUString("b");
+    if (type == "boolean") return OUString("b");
     if (type == "char") return OUString("c");
     if (type == "short") return OUString("n");
     if (type == "long") return OUString("n");
@@ -79,7 +137,7 @@ OUString hsTypeCxxPrefix (OUString const & type)
     if (type == "float") return OUString("f");
     if (type == "double") return OUString("f");
     if (type == "string") return OUString("s");
-    return type;
+    return OUString();
 }
 
 OUString toFunctionPrefix (OUString const & name)

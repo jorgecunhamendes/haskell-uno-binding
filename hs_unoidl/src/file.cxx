@@ -17,12 +17,27 @@ using rtl::OUString;
 
 const OUString pathSeparator("/");
 
+File::File (OUString const & url) {
+    initialize(url);
+}
+
 File::File (OUString const & prefix, OUString const & path,
         OUString const & name)
 {
+    OUString relPath = prefix + pathSeparator + path + pathSeparator + name;
+    OUString abs = getFileUrlFromPath(relPath);
+
+    initialize(abs);
+}
+
+File::~File () {
+    this->close();
+}
+
+OUString File::getFileUrlFromPath (rtl::OUString const & path)
+{
     OUString url;
-    osl::FileBase::RC e1 = osl::FileBase::getFileURLFromSystemPath(
-            prefix + pathSeparator + path + pathSeparator + name, url);
+    osl::FileBase::RC e1 = osl::FileBase::getFileURLFromSystemPath(path, url);
     if (e1 != osl::FileBase::E_None) {
         std::cerr
             << "Cannot convert \"" << path << "\" to file URL, error code "
@@ -45,20 +60,19 @@ File::File (OUString const & prefix, OUString const & path,
             << "\" into an absolute file URL, error code " << +e1 << std::endl;
         std::exit(EXIT_FAILURE);
     }
+    return abs;
+}
 
+void File::initialize(rtl::OUString const & url) {
     // create path for file
-    sal_Int32 end = abs.lastIndexOf('/');
-    OUString dir (abs.copy(0, end));
+    sal_Int32 end = url.lastIndexOf('/');
+    OUString dir (url.copy(0, end));
     osl::Directory::createPath(dir);
 
     // open file
     OUString absPath;
-    osl::FileBase::getSystemPathFromFileURL(abs, absPath);
+    osl::FileBase::getSystemPathFromFileURL(url, absPath);
     this->open(absPath.toUtf8().getStr(), std::ofstream::trunc);
-}
-
-File::~File () {
-    this->close();
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

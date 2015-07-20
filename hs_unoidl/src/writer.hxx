@@ -15,9 +15,13 @@
 
 #include "entity.hxx"
 
+void writePlainStruct (Entity const & entity);
+
 void writeInterface (Entity const & entity);
 
 void writeException (Entity const & entity);
+
+void writeSingleInterfaceBasedService (Entity const & entity);
 
 void writeInterfaceBasedSingleton (Entity const & entity);
 

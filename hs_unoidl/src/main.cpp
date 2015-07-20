@@ -625,24 +625,7 @@ void writeEntity(
             }
         case unoidl::Entity::SORT_PLAIN_STRUCT_TYPE:
             {
-                rtl::Reference<unoidl::PlainStructTypeEntity> ent2(
-                    static_cast<unoidl::PlainStructTypeEntity *>(ent.get()));
-                writeAnnotationsPublished(ent);
-                std::cout << "struct " << id;
-                if (!ent2->getDirectBase().isEmpty()) {
-                    std::cout << ": ";
-                    writeName(ent2->getDirectBase());
-                }
-                std::cout << " {\n";
-                for (std::vector<unoidl::PlainStructTypeEntity::Member>::const_iterator
-                         j(ent2->getDirectMembers().begin());
-                     j != ent2->getDirectMembers().end(); ++j)
-                {
-                    writeAnnotations(j->annotations);
-                    writeType(j->type);
-                    std::cout << ' ' << j->name << ";\n";
-                }
-                std::cout << "};\n";
+                writePlainStruct(i->second);
                 break;
             }
         case unoidl::Entity::SORT_POLYMORPHIC_STRUCT_TYPE_TEMPLATE:
@@ -782,43 +765,7 @@ void writeEntity(
             }
         case unoidl::Entity::SORT_SINGLE_INTERFACE_BASED_SERVICE:
             {
-                rtl::Reference<unoidl::SingleInterfaceBasedServiceEntity> ent2(
-                    static_cast<unoidl::SingleInterfaceBasedServiceEntity *>(
-                        ent.get()));
-                writeAnnotationsPublished(ent);
-                std::cout << "service " << id << ": ";
-                writeName(ent2->getBase());
-                if (ent2->getConstructors().size() != 1
-                    || !ent2->getConstructors().front().defaultConstructor)
-                {
-                    std::cout << " {\n";
-                    for (std::vector<unoidl::SingleInterfaceBasedServiceEntity::Constructor>::const_iterator
-                             j(ent2->getConstructors().begin());
-                         j != ent2->getConstructors().end(); ++j)
-                    {
-                        writeAnnotations(j->annotations);
-                        std::cout << j->name << '(';
-                        for (std::vector<unoidl::SingleInterfaceBasedServiceEntity::Constructor::Parameter>::const_iterator
-                                 k(j->parameters.begin());
-                             k != j->parameters.end(); ++k)
-                        {
-                            if (k != j->parameters.begin()) {
-                                std::cout << ", ";
-                            }
-                            std::cout << "[in] ";
-                            writeType(k->type);
-                            if (k->rest) {
-                                std::cout << "...";
-                            }
-                            std::cout << ' ' << k->name;
-                        }
-                        std::cout << ')';
-                        writeExceptionSpecification(j->exceptions);
-                        std::cout << ";\n";
-                    }
-                    std::cout << '}';
-                }
-                std::cout << ";\n";
+                writeSingleInterfaceBasedService(i->second);
                 break;
             }
         case unoidl::Entity::SORT_ACCUMULATION_BASED_SERVICE:

@@ -12,8 +12,12 @@
 #include <vector>
 #include "rtl/ustring.hxx"
 
-bool isPrimitiveType (rtl::OUString const & name);
-bool isStringType (rtl::OUString const & name);
+bool isHsUnoType (rtl::OUString const & type);
+bool isBasicType (rtl::OUString const & type);
+bool isSimpleType (rtl::OUString const & type);
+bool isPrimitiveType (rtl::OUString const & type);
+bool isStringType (rtl::OUString const & type);
+bool isSequenceType (rtl::OUString const & type);
 rtl::OUString toCppType (rtl::OUString const & name);
 rtl::OUString toHsType (rtl::OUString const & name);
 rtl::OUString toHsCppType (rtl::OUString const & name);

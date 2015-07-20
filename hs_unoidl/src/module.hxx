@@ -12,8 +12,6 @@
 #include <vector>
 #include "rtl/ustring.hxx"
 
-rtl::OUString capitalize (rtl::OUString const & str);
-
 class Module {
     public:
         Module () : names() {};

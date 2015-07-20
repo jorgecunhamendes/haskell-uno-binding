@@ -14,9 +14,13 @@
 
 class File : public std::ofstream {
     public:
+        File (rtl::OUString const & url);
         File (rtl::OUString const & prefix, rtl::OUString const & path,
                 rtl::OUString const & name);
         ~File ();
+        static rtl::OUString getFileUrlFromPath (rtl::OUString const & path);
+    private:
+        void initialize(rtl::OUString const & url);
 };
 
 #endif /* HSUNOIDL_FILE_HXX */

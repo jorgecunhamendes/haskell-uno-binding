@@ -29,9 +29,14 @@ clean :
 OBJECTS= \
 	out/main.cpp_o \
 	out/writer.cxx_o \
+	out/writer/cxx.cxx_o \
+	out/writer/hxx.cxx_o \
+	out/writer/hs.cxx_o \
+	out/writer/utils.cxx_o \
 	out/file.cxx_o \
 	out/module.cxx_o \
-	out/types.cxx_o
+	out/types.cxx_o \
+	out/utils.cxx_o
 
 # Linking
 LINK=$(LDPATH) g++
@@ -45,7 +50,8 @@ CPPFLAGS= -std=c++11 \
 					-DCPPU_ENV=gcc3 -DHAVE_GCC_VISIBILITY_FEATURE -DLINUX -DUNX
 INCLUDES= -I"$(LO_SRC)/include" \
 					-I"$(LO_SRC)/config_host" \
-					-I"$(LO_INSTDIR)/sdk/include"
+					-I"$(LO_INSTDIR)/sdk/include" \
+					-I"src"
 
 # Main target
 hs_unoidl : $(OBJECTS)
@@ -60,9 +66,16 @@ out/%.cxx_o : src/%.cxx | out
 # C++ file dependencies
 out/main.cpp_o : src/main.cpp
 out/writer.cxx_o : src/writer.cxx src/writer.hxx
+out/writer/utils.cxx_o : src/writer/utils.cxx src/writer/utils.hxx | out/writer
+out/writer/cxx.cxx_o : src/writer/cxx.cxx src/writer/cxx.hxx | out/writer
+out/writer/hxx.cxx_o : src/writer/hxx.cxx src/writer/hxx.hxx | out/writer
+out/writer/hs.cxx_o : src/writer/hs.cxx src/writer/hs.hxx | out/writer
 out/file.cxx_o : src/file.cxx src/file.hxx
 out/module.cxx_o : src/module.cxx src/module.hxx
 out/types.cxx_o : src/types.cxx src/types.hxx
 
 out :
+	mkdir $@
+
+out/writer : | out
 	mkdir $@

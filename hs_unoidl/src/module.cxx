@@ -12,6 +12,8 @@
 
 #include "rtl/ustrbuf.hxx"
 
+#include "utils.hxx"
+
 using rtl::OUString;
 using rtl::OUStringBuffer;
 
@@ -87,12 +89,6 @@ OUString Module::joinWith (std::vector< OUString > strs,
         buf.append(*it);
     }
     return buf.makeStringAndClear();
-}
-
-OUString capitalize (OUString const & str) {
-    sal_Unicode first (str[0]);
-    sal_Unicode capital (first >= 97 && first <= 122 ? first -32 : first);
-    return str.replaceAt(0, 1, OUString(capital));
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */
