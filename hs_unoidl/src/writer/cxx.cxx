@@ -136,7 +136,7 @@ void CxxWriter::writeInterfaceTypeEntity (Entity const & entity) {
             } else if (isStringType(j->returnType)) {
                 out << "rtl_uString * result = 0;";
             } else if (j->returnType == "any") {
-                out << "uno_Any * result = 0;";
+                out << "uno_Any * result = new uno_Any;";
             } else if (isSequenceType(j->returnType)) {
                 out << toCppType(j->returnType) << " * result = 0;";
             } else {
@@ -169,8 +169,14 @@ void CxxWriter::writeInterfaceTypeEntity (Entity const & entity) {
         // execute the call
         indent(out, 4);
         out << "makeBinaryUnoCall(iface, \"" << fqn << "::" << j->name
-            << "\", " << (j->returnType == "void" ? "NULL" : "&result")
-            << ", args, exception);" << std::endl;
+            << "\", ";
+        if (j->returnType == "void")
+            out << "NULL";
+        else if (j->returnType == "any")
+            out << "result";
+        else
+            out << "&result";
+        out << ", args, exception);" << std::endl;
         // create result and return
         if (j->returnType != "void") {
             indent(out, 4);
