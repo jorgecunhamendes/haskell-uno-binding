@@ -60,9 +60,9 @@ sal_Int64 anyToInt64 (uno_Any * any) {
 }
 
 extern "C"
-css::uno::Reference< css::uno::XInterface > * anyToInterface (uno_Any * any) {
-    Any a0 = *static_cast< Any *>(any);
-    css::uno::Reference< css::uno::XInterface > * a =
-        new css::uno::Reference< css::uno::XInterface >(a0, css::uno::UNO_QUERY);
-    return a;
+css::uno::Reference< css::uno::XInterface > * anyToInterface ( uno_Any * any) {
+    void * cppIface = g_uno2cpp.mapInterface(any->pReserved, any->pType);
+    css::uno::Reference< com::sun::star::uno::XInterface > result
+        (static_cast< css::uno::XInterface * >(cppIface), css::uno::UNO_QUERY);
+    return new css::uno::Reference< com::sun::star::uno::XInterface >(result);
 }

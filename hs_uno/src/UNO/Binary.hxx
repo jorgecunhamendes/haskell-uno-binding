@@ -2,7 +2,6 @@
 #define HSUNO_UNO_BINARY_H
 
 #include "com/sun/star/uno/XComponentContext.hpp"
-#include "com/sun/star/util/XMacroExpander.hpp"
 #include "uno/any2.h"
 #include "uno/mapping.hxx"
 
