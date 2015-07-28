@@ -10,6 +10,7 @@
 #define HSUNOIDL_WRITER_HS_HXX
 
 #include "rtl/ustring.hxx"
+#include <set>
 
 #include "entity.hxx"
 #include "file.hxx"
@@ -17,8 +18,10 @@
 
 class HsWriter {
     public:
-        HsWriter(rtl::OUString const & fileurl) : out(fileurl) {};
-        void writeOpening (Entity const & entity);
+        HsWriter(rtl::OUString const & fileurl, Entity const & entity) : out(fileurl), entity(entity) {};
+        // generic writer methods
+        void writeOpening (std::set< rtl::OUString > const & deps
+                = std::set< rtl::OUString >());
         void writeForeignImport (rtl::OUString & cfname, rtl::OUString & fname,
                 std::vector< rtl::OUString > & params, rtl::OUString & rtype);
         //void writeFunctionType (std::vector< OUString > classes,
@@ -31,11 +34,18 @@ class HsWriter {
                 std::vector< Parameter > & params);
         // UNO Entities
         // - plain struct type
-        void writePlainStructTypeEntity (Entity const & entity);
+        void writePlainStructTypeEntity ();
         // - interface type
-        void writeInterfaceTypeEntity (Entity const & entity);
+        void writeInterfaceTypeEntity ();
+        // - single-interface-based service type
+        void writeSingleInterfaceBasedServiceEntity ();
+        // auxiliary methods
+        std::set< rtl::OUString > plainStructTypeEntityDependencies ();
+        std::set< rtl::OUString > interfaceTypeEntityDependencies ();
+        std::set< rtl::OUString > singleInterfaceBasedServiceEntityDependencies ();
     private:
         File out;
+        Entity entity;
 };
 
 #endif /* HSUNOIDL_WRITER_HS_HXX */

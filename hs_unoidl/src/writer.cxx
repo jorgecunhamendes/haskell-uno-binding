@@ -83,9 +83,9 @@ void writePlainStruct (Entity const & entity) {
 
     // hs
     OUString hsFilePath = filePath + hsFileExtension;
-    HsWriter hs (File::getFileUrlFromPath(hsFilePath));
-    hs.writeOpening(entity);
-    hs.writePlainStructTypeEntity(entity);
+    HsWriter hs (File::getFileUrlFromPath(hsFilePath), entity);
+    hs.writeOpening(hs.plainStructTypeEntityDependencies());
+    hs.writePlainStructTypeEntity();
 }
 
 void writeInterface (Entity const & entity) {
@@ -107,9 +107,9 @@ void writeInterface (Entity const & entity) {
 
     // hs
     OUString hsFilePath = filePath + hsFileExtension;
-    HsWriter hs (File::getFileUrlFromPath(hsFilePath));
-    hs.writeOpening(entity);
-    hs.writeInterfaceTypeEntity(entity);
+    HsWriter hs (File::getFileUrlFromPath(hsFilePath), entity);
+    hs.writeOpening(hs.interfaceTypeEntityDependencies());
+    hs.writeInterfaceTypeEntity();
 }
 
 void writeException (Entity const & entity)
@@ -224,14 +224,6 @@ void writeExceptionHsGetter(std::ostream & hxx, OUString const & entityName,
 }
 
 void writeSingleInterfaceBasedService (Entity const & entity) {
-    OUString name (entity.name);
-    OUString entityFullName (entity.module.getName() + "." + name);
-    const OUString hsFileName(name + hsFileExtension);
-
-    File hs ("gen/", entity.module.asPathCapitalized(), capitalize(hsFileName));
-
-    writeSingleInterfaceBasedServiceAux(hs, hs, hs, entity);
-
     const OUString filePath ("gen/" + entity.module.asPathCapitalized() + "/"
             + entity.name);
 
@@ -247,53 +239,12 @@ void writeSingleInterfaceBasedService (Entity const & entity) {
     hxx.writeOpening(entity);
     hxx.writeSingleInterfaceBasedServiceEntity(entity);
     hxx.writeClosing(entity);
-}
-
-void writeSingleInterfaceBasedServiceAux (std::ostream & cxx,
-        std::ostream & hxx, std::ostream & hs, Entity const & entity)
-{
-    rtl::Reference<unoidl::SingleInterfaceBasedServiceEntity> ent (
-            static_cast<unoidl::SingleInterfaceBasedServiceEntity *>(entity.entity.get()));
-    OUString entityName (entity.name);
-    OUString entityFullName (entity.module.getName() + "." + entityName);
-    // entity module (including its name)
-    Module eModule = entity.module.createSubModule(entity.name);
-    // entity fully qualified name
-    OUString eFQN (eModule.asNamespace());
-    // entity base module
-    Module eBaseModule(ent->getBase());
-    // entity base fully qualified name
-    OUString eBaseFQN(eBaseModule.asNamespace());
 
     // hs
-    hs << "module " << eModule.getNameCapitalized() << " where" << std::endl;
-    hs << std::endl;
-    hs << "import " << eBaseModule.getNameCapitalized() << std::endl;
-    hs << "import UNO" << std::endl;
-    hs << std::endl;
-    hs << "import Control.Applicative ((<$>))" << std::endl;
-    hs << "import Foreign.Ptr" << std::endl;
-    hs << std::endl;
-    hs << "data " << capitalize(entity.name) << " = " << capitalize(entity.name)
-       << " (Ptr UnoInterface)" << std::endl; // FIXME content should not be a UnoInterface
-    hs << std::endl;
-    hs << "instance Service " << capitalize(entity.name) << " where"
-       << std::endl;
-    hs << "    getInterface (" << capitalize(entity.name) << " ptr) = ptr"
-       << std::endl;
-    hs << std::endl;
-    hs << "instance " << capitalize(eBaseModule.getLastName()) << " "
-       << capitalize(entity.name) << " where" << std::endl;
-    hs << std::endl;
-    hs << entity.name << "Create :: IO " << capitalize(entity.name) << std::endl;
-    hs << entity.name << "Create = " << capitalize(entity.name) << " <$> c"
-       << capitalize(entity.name) << "_create" << std::endl;
-    hs << std::endl;
-    hs << "foreign import ccall \"" << functionPrefix
-       << toFunctionPrefix(entityFullName) << "_create" << "\" c"
-       << capitalize(entity.name) << "_create" << std::endl;
-    hs << "    :: IO (Ptr UnoInterface)" << std::endl; // FIXME content should not be a UnoInterface
-    hs << std::endl;
+    OUString hsFilePath = filePath + hsFileExtension;
+    HsWriter hs (File::getFileUrlFromPath(hsFilePath), entity);
+    hs.writeOpening(hs.singleInterfaceBasedServiceEntityDependencies());
+    hs.writeSingleInterfaceBasedServiceEntity();
 }
 
 void writeInterfaceBasedSingleton (Entity const & entity)

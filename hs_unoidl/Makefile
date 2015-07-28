@@ -65,7 +65,8 @@ out/%.cxx_o : src/%.cxx | out
 
 # C++ file dependencies
 out/main.cpp_o : src/main.cpp
-out/writer.cxx_o : src/writer.cxx src/writer.hxx
+out/writer.cxx_o : src/writer.cxx src/writer.hxx \
+	src/writer/cxx.hxx src/writer/hxx.hxx src/writer/hs.hxx
 out/writer/utils.cxx_o : src/writer/utils.cxx src/writer/utils.hxx | out/writer
 out/writer/cxx.cxx_o : src/writer/cxx.cxx src/writer/cxx.hxx | out/writer
 out/writer/hxx.cxx_o : src/writer/hxx.cxx src/writer/hxx.hxx | out/writer

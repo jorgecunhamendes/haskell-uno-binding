@@ -14,18 +14,29 @@
 #include "../utils.hxx"
 
 using std::vector;
+using std::set;
 using rtl::OUString;
 
-void HsWriter::writeOpening (Entity const & entity) {
-    out << "module " << entity.module.getNameCapitalized()
+void HsWriter::writeOpening (set< OUString > const & deps) {
+    out << "module " << entity.module.createSubModule(entity.name).getNameCapitalized()
         << " where" << std::endl;
     out << std::endl;
     out << "import UNO" << std::endl;
+    out << "import Temp" << std::endl; // FIXME this is temporary code for the document-loader example
     out << std::endl;
     out << "import Control.Applicative ((<$>))" << std::endl;
+    out << "import Control.Monad (when)" << std::endl;
     out << "import Data.Int" << std::endl;
+    out << "import Data.Text (Text)" << std::endl;
     out << "import Data.Word" << std::endl;
     out << "import Foreign" << std::endl;
+    // imports for dependencies
+    if (deps.size() > 0) {
+        out << std::endl;
+        for (set< OUString >::const_iterator it (deps.begin())
+                ; it != deps.end(); ++it)
+            out << "import " << *it << std::endl;
+    }
     out << std::endl;
 }
 
@@ -61,7 +72,7 @@ void HsWriter::writeFunctionType (OUString & fname,
             out << "(Ptr " << toHsType(it->type) << ") -> ";
     if (io)
         out << "IO ";
-    if (isBasicType(rtype))
+    if (isBasicType(rtype) || rtype.compareTo("hsuno ", 6) == 0)
         out << toHsType(rtype);
     else
         out << "(Ptr " << toHsType(rtype) << ")";
@@ -72,11 +83,11 @@ void HsWriter::writeFunctionLHS (OUString & fname, vector< Parameter > & params)
     out << fname;
     for (vector< Parameter >::const_iterator it (params.begin())
             ; it != params.end() ; ++it)
-        out << " " << decapitalize(it->name);
+        out << " " << it->name;
     out << " =";
 }
 
-void HsWriter::writePlainStructTypeEntity (Entity const & entity)
+void HsWriter::writePlainStructTypeEntity ()
 {
     OUString entityNameCapitalized (capitalize(entity.name));
     OUString fqn = entity.module.createSubModule(entity.name).getName();
@@ -121,7 +132,7 @@ void HsWriter::writePlainStructTypeEntity (Entity const & entity)
     // TODO
 }
 
-void HsWriter::writeInterfaceTypeEntity (Entity const & entity) {
+void HsWriter::writeInterfaceTypeEntity () {
     rtl::Reference<unoidl::InterfaceTypeEntity> ent (
             static_cast<unoidl::InterfaceTypeEntity *>(entity.entity.get()));
     OUString entityName (entity.name);
@@ -147,8 +158,9 @@ void HsWriter::writeInterfaceTypeEntity (Entity const & entity) {
         //methodParams.push_back({ "hsuno_exception_ptr", "exceptionPtr" });
         for (vector<unoidl::InterfaceTypeEntity::Method::Parameter>::const_iterator
                 p(m->parameters.begin()) ; p != m->parameters.end() ; ++p) {
-            methodParams.push_back({ p->type, p->name });
-            params.push_back({ p->type, p->name });
+            OUString paramName (decapitalize(p->name));
+            methodParams.push_back({ p->type, paramName });
+            params.push_back({ p->type, paramName });
         }
 
         out << std::endl;
@@ -167,15 +179,16 @@ void HsWriter::writeInterfaceTypeEntity (Entity const & entity) {
                 k(m->parameters.begin());
                 k != m->parameters.end(); ++k)
         {
+            OUString name (decapitalize(k->name));
             if (isStringType(k->type)) {
-                OUString s (hsTypeCxxPrefix(k->type) + k->name);
+                OUString s (hsTypeCxxPrefix(k->type) + name);
                 arguments.push_back(s);
                 indent(out, level);
-                out << s << " <- hs_text_to_oustring " << k->name << std::endl;
+                out << s << " <- hs_text_to_oustring " << name << std::endl;
                 // FIXME Check if the OUString is destructed.
                 // If not, create a function "withOUStringText" that handles that.
             } else {
-                arguments.push_back(k->name);
+                arguments.push_back(name);
             }
         }
         // prepare exception pointer
@@ -238,5 +251,116 @@ void HsWriter::writeInterfaceTypeEntity (Entity const & entity) {
         out << std::endl;
         writeForeignImport(cMethodName, hsMethodName, params, type);
     }
+}
+
+void HsWriter::writeSingleInterfaceBasedServiceEntity () {
+    rtl::Reference<unoidl::SingleInterfaceBasedServiceEntity> ent (
+            static_cast<unoidl::SingleInterfaceBasedServiceEntity *>(entity.entity.get()));
+    OUString entityName (entity.name);
+    OUString entityFullName (entity.module.getName() + "." + entityName);
+    // entity module (including its name)
+    Module eModule = entity.module.createSubModule(entity.name);
+    // entity fully qualified name
+    OUString eFQN (eModule.asNamespace());
+    // entity base module
+    Module eBaseModule(ent->getBase());
+    // entity base fully qualified name
+    OUString eBaseFQN(eBaseModule.asNamespace());
+
+    out << "data " << capitalize(entity.name) << " = " << capitalize(entity.name)
+        << " (Ptr UnoInterface)" << std::endl; // FIXME content should not be a UnoInterface
+    out << std::endl;
+    out << "instance Service " << capitalize(entity.name) << " where"
+        << std::endl;
+    out << "    getInterface (" << capitalize(entity.name) << " ptr) = ptr"
+        << std::endl;
+    out << std::endl;
+    out << "instance " << capitalize(eBaseModule.getLastName()) << " "
+        << capitalize(entity.name) << " where" << std::endl;
+
+    // create method
+    OUString hsImportMethodName ("c" + capitalize(entity.name) + "_create");
+    {
+        OUString hsMethodName (decapitalize(entity.name) + "Create");
+        vector< Parameter > methodParams;
+        methodParams.push_back({ OUString("hsuno Ptr Context"), OUString("context") });
+        OUString methodType ("hsuno " + capitalize(entity.name));
+
+        out << std::endl;
+        writeFunctionType(hsMethodName, methodParams, methodType);
+
+        out << std::endl;
+        writeFunctionLHS(hsMethodName, methodParams);
+        out << " " << capitalize(entity.name) << " <$> " << hsImportMethodName
+            << " context" << std::endl;
+    }
+
+    // foreign import
+    {
+        OUString cMethodName (functionPrefix + toFunctionPrefix(entityFullName)
+                + "_create");
+        vector< OUString > importMethodParams;
+        importMethodParams.push_back("hsuno Context");
+        OUString methodType ("hsuno_interface");
+
+        out << std::endl;
+        writeForeignImport (cMethodName, hsImportMethodName, importMethodParams,
+                methodType);
+    }
+}
+
+set< OUString > HsWriter::plainStructTypeEntityDependencies () {
+    set< OUString > deps;
+    deps.insert(entity.module.getNameCapitalized());
+    return deps;
+}
+
+set< OUString > HsWriter::interfaceTypeEntityDependencies () {
+    set< OUString > deps;
+    deps.insert(entity.module.getNameCapitalized());
+
+    // dependencies from methods
+    rtl::Reference<unoidl::InterfaceTypeEntity> ent (
+            static_cast<unoidl::InterfaceTypeEntity *>(entity.entity.get()));
+    vector< unoidl::InterfaceTypeEntity::Method > members =
+        ent->getDirectMethods();
+    for (vector<unoidl::InterfaceTypeEntity::Method>::const_iterator
+            m(members.begin()) ; m != members.end() ; ++m)
+    {
+        // return type
+        {
+            OUString type (m->returnType);
+            if (isSequenceType(type))
+                type = type.copy(2);
+            if (!isPrimitiveType(type) && type != "any") {
+                Module dep (type);
+                deps.insert(dep.getParent().getNameCapitalized());
+                //deps.insert(dep.getNameCapitalized());
+            }
+        }
+        // argument types
+        for (std::vector<unoidl::InterfaceTypeEntity::Method::Parameter>::const_iterator
+                k(m->parameters.begin());
+                k != m->parameters.end(); ++k)
+        {
+            OUString type (k->type);
+            if (isSequenceType(type))
+                type = type.copy(2);
+            if (!isPrimitiveType(type) && type != "any") {
+                Module dep (type);
+                deps.insert(dep.getParent().getNameCapitalized());
+                //deps.insert(dep.getNameCapitalized());
+            }
+        }
+    }
+    return deps;
+}
+
+set< OUString > HsWriter::singleInterfaceBasedServiceEntityDependencies () {
+    set< OUString > deps;
+    rtl::Reference<unoidl::SingleInterfaceBasedServiceEntity> ent (
+            static_cast<unoidl::SingleInterfaceBasedServiceEntity *>(entity.entity.get()));
+    deps.insert(Module(ent->getBase()).getNameCapitalized());
+    return deps;
 }
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

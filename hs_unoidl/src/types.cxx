@@ -84,6 +84,8 @@ OUString toHsType (OUString const & name)
 {
     if (name.compareTo("hsuno ", 6) == 0)
         return name.copy(6);
+    if (name == "hsuno_interface") return OUString("UnoInterface");
+    if (name == "hsuno_exception_ptr") return OUString("(Ptr Any)");
     if (name == "void") return OUString("()");
     if (name == "boolean") return OUString("Bool");
     if (name == "char") return OUString("Int8");
@@ -93,7 +95,9 @@ OUString toHsType (OUString const & name)
     if (name == "float") return OUString("Float");
     if (name == "double") return OUString("Double");
     if (name == "string") return OUString("Text");
-    if (name == "type") return OUString("TypeDescription");
+    //if (name == "type") return OUString("TypeDescription");
+    if (name == "type") return OUString("CssUnoType");
+    if (name == "any") return OUString("AnyRef");
     OUString result;
     if (isSequenceType(name)) {
         result = "(Sequence " + toHsType(name.copy(2)) + ")";
@@ -105,6 +109,8 @@ OUString toHsType (OUString const & name)
 
 OUString toHsCppType (OUString const & name)
 {
+    if (name.compareTo("hsuno ", 6) == 0)
+        return name.copy(6);
     if (name == "hsuno_interface") return OUString("UnoInterface");
     if (name == "hsuno_exception_ptr") return OUString("(Ptr Any)");
     if (name == "void") return OUString("()");

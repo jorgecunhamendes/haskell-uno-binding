@@ -19,6 +19,11 @@
 struct Entity {
     enum class Sorted { NO, ACTIVE, YES };
 
+    explicit Entity(Entity const & e):
+        entity(e.entity), module(e.module), name(e.name), relevant(e.relevant), sorted(Sorted::NO),
+        written(false)
+    {}
+
     explicit Entity(
         rtl::Reference<unoidl::Entity> const & theEntity, Module module,
         rtl::OUString const & name, bool theRelevant):
