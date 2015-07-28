@@ -3,6 +3,7 @@
 #include "cppuhelper/bootstrap.hxx"
 #include "uno/dispatcher.h"
 #include "com/sun/star/uno/Any.hxx"
+#include "sal/main.h"
 
 using ::com::sun::star::uno::Any;
 
@@ -11,8 +12,9 @@ css::uno::Mapping g_cpp2uno;
 css::uno::Mapping g_uno2cpp;
 
 extern "C"
-void * bootstrap()
+void * bootstrap(int argc, char ** argv)
 {
+    sal_detail_initialize(argc, argv);
     g_context = cppu::defaultBootstrap_InitialComponentContext();
     g_cpp2uno = css::uno::Mapping(
                 css::uno::Environment::getCurrent(),
