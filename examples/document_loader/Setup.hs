@@ -88,9 +88,10 @@ makeTypes loInstallDir builddir types = do
         let out = cpputypesInclude builddir
             typelist = "-T" ++ intercalate ";" types
             typedb = "$LO_INSTDIR/program/types.rdb"
+            offapidb = "$LO_INSTDIR/program/types/offapi.rdb"
         putStrLn "Building required LibreOffice SDK C++ types"
         createDirectoryIfMissing True out
-        cppumaker ("-O" ++ out) typelist typedb
+        cppumaker ("-O" ++ out) typelist typedb offapidb
         touch cxxTypesFlagFile
     -- make Haskell types
     putStrLn "NOT building required LibreOffice SDK Haskell types"
@@ -104,9 +105,9 @@ makeTypes loInstallDir builddir types = do
         touch hsTypesFlagFile
     return ()
 
-cppumaker :: String -> String -> String -> IO ()
-cppumaker out typelist typedb = void $ system ("$LO_INSTDIR/sdk/bin/cppumaker " ++ args)
-  where args = unwords $ map quote [out, typelist, typedb]
+cppumaker :: String -> String -> String -> String -> IO ()
+cppumaker out typelist typedb offapidb = void $ system ("$LO_INSTDIR/sdk/bin/cppumaker " ++ args)
+  where args = unwords $ map quote [out, typedb, offapidb]
         quote s = "\"" ++ s ++ "\""
 
 hs_unoidl :: FilePath -> String -> IO ()

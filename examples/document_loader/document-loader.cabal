@@ -17,7 +17,7 @@ extra-tmp-files:     gen
 executable document-loader
   main-is:             Main.hs
   -- other-modules:       
-  other-extensions:    OverloadedStrings
+  other-extensions:    OverloadedStrings, FlexibleInstances
   hs-source-dirs:      ., tmp
   build-depends:       base >=4.6
                      , text
@@ -31,9 +31,16 @@ executable document-loader
     com.sun.star.beans.Property
     com.sun.star.beans.XPropertySet
     com.sun.star.beans.XPropertySetInfo
+    com.sun.star.beans.XPropertyChangeListener
+    com.sun.star.uno.XComponentContext
+    com.sun.star.uno.DeploymentException
+    com.sun.star.lang.XMultiComponentFactory
+    com.sun.star.beans.XVetoableChangeListener
+    com.sun.star.beans.PropertyChangeEvent
+    com.sun.star.frame.Desktop
+    com.sun.star.frame.XDesktop2
+    com.sun.star.frame.XComponentLoader
+    com.sun.star.beans.PropertyValue
 
 
---    com.sun.star.frame.Desktop
---    com.sun.star.frame.XComponentLoader
---    com.sun.star.lang.XMultiComponentFactory
 --    com.sun.star.registry.XSimpleRegistry
