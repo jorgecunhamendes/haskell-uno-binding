@@ -15,10 +15,15 @@
 #include "entity.hxx"
 #include "file.hxx"
 #include "writer/utils.hxx"
+#include "writer/writer.hxx"
 
-class HsWriter {
+class HsWriter : public Writer {
     public:
-        HsWriter(rtl::OUString const & fileurl, Entity const & entity) : out(fileurl), entity(entity) {};
+        HsWriter(rtl::OUString const & fileurl, EntityRef const & entity)
+            : Writer(fileurl, entity) {};
+        HsWriter(rtl::OUString const & fileurl, EntityRef const & entity,
+                EntityList const & entities)
+            : Writer(fileurl, entity, entities) {};
         // generic writer methods
         void writeOpening (std::set< rtl::OUString > const & deps
                 = std::set< rtl::OUString >());
@@ -28,6 +33,7 @@ class HsWriter {
         //        rtl::OUString & fname, std::vector< Parameter > & params,
         //        rtl::OUString & rtype, bool io = true);
         void writeFunctionType (rtl::OUString & fname,
+                std::vector< rtl::OUString > & classes,
                 std::vector< Parameter > & params, rtl::OUString & rtype,
                 bool io = true);
         void writeFunctionLHS (rtl::OUString & fname,
@@ -37,15 +43,14 @@ class HsWriter {
         void writePlainStructTypeEntity ();
         // - interface type
         void writeInterfaceTypeEntity ();
+        // - exception type
+        void writeExceptionTypeEntity ();
         // - single-interface-based service type
         void writeSingleInterfaceBasedServiceEntity ();
         // auxiliary methods
         std::set< rtl::OUString > plainStructTypeEntityDependencies ();
         std::set< rtl::OUString > interfaceTypeEntityDependencies ();
         std::set< rtl::OUString > singleInterfaceBasedServiceEntityDependencies ();
-    private:
-        File out;
-        Entity entity;
 };
 
 #endif /* HSUNOIDL_WRITER_HS_HXX */

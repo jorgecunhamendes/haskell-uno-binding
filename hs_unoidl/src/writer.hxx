@@ -9,23 +9,20 @@
 #ifndef HSUNOIDL_WRITER_HXX
 #define HSUNOIDL_WRITER_HXX
 
-#include "rtl/ustring.hxx"
-#include "rtl/ref.hxx"
-#include "unoidl/unoidl.hxx"
-
 #include "entity.hxx"
 
-void writePlainStruct (Entity const & entity);
+void writePlainStruct (EntityList const & entities, EntityRef const & entity);
 
-void writeInterface (Entity const & entity);
+void writeInterface (EntityList const & entities, EntityRef const & entity);
 
-void writeException (Entity const & entity);
+void writeException (EntityRef const & entity);
 
-void writeSingleInterfaceBasedService (Entity const & entity);
+void writeSingleInterfaceBasedService (EntityList const & entities,
+        EntityRef const & entity);
 
-void writeInterfaceBasedSingleton (Entity const & entity);
+void writeInterfaceBasedSingleton (EntityRef const & entity);
 
-void writeServiceBasedSingleton (Entity const & entity);
+void writeServiceBasedSingleton (EntityRef const & entity);
 
 #endif /* HSUNOIDL_WRITER_HXX */
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

@@ -10,36 +10,39 @@
 #define HSUNOIDL_ENTITY_HXX
 
 #include <set>
+#include <map>
 
 #include "rtl/ustring.hxx"
 #include "unoidl/unoidl.hxx"
 
 #include "module.hxx"
 
-struct Entity {
-    enum class Sorted { NO, ACTIVE, YES };
+struct Entity : public salhelper::SimpleReferenceObject {
+    rtl::Reference< unoidl::Entity > unoidl;
+    rtl::OUString type;
+    std::set< rtl::OUString > interfaces;
+    std::set< rtl::OUString > dependencies;
 
-    explicit Entity(Entity const & e):
-        entity(e.entity), module(e.module), name(e.name), relevant(e.relevant), sorted(Sorted::NO),
-        written(false)
-    {}
+    inline Module getModule () const {
+        return Module(type).getParent();
+    }
 
-    explicit Entity(
-        rtl::Reference<unoidl::Entity> const & theEntity, Module module,
-        rtl::OUString const & name, bool theRelevant):
-        entity(theEntity), module(&module), name(name), relevant(theRelevant), sorted(Sorted::NO),
-        written(false)
-    {}
+    inline rtl::OUString getName () const {
+        return Module(type).getLastName();
+    }
 
-    rtl::Reference<unoidl::Entity> const entity;
-    Module module;
-    rtl::OUString name;
-    std::set<rtl::OUString> dependencies;
-    std::set<rtl::OUString> interfaceDependencies;
-    bool relevant;
-    Sorted sorted;
-    bool written;
+    inline bool isStruct () const {
+        return unoidl->getSort() == unoidl::Entity::SORT_PLAIN_STRUCT_TYPE;
+    }
+
+    inline bool isInterface () const {
+        return unoidl->getSort() == unoidl::Entity::SORT_INTERFACE_TYPE;
+    }
 };
+
+typedef rtl::Reference< Entity > EntityRef;
+
+typedef std::map< rtl::OUString, EntityRef > EntityList;
 
 #endif /* HSUNOIDL_ENTITY_HXX */
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

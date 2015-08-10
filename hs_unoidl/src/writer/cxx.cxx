@@ -16,44 +16,68 @@
 using rtl::OUString;
 using std::vector;
 
-void CxxWriter::writeOpening (Entity const & entity) {
-    out << "#include \"" << capitalize(entity.name) << headerFileExtension
+void CxxWriter::writeOpening () {
+    out << "#include \"" << capitalize(entity->getName()) << headerFileExtension
         << "\"" << std::endl;
     out << "#include \"UNO/Binary.hxx\"" << std::endl;
     out << "#include \"rtl/ref.hxx\"" << std::endl;
 }
 
-void CxxWriter::writePlainStructTypeEntity (Entity const & entity)
+void CxxWriter::writePlainStructTypeEntity ()
 {
-    OUString entityNameCapitalized (capitalize(entity.name));
-    OUString fqn = entity.module.createSubModule(entity.name).getName();
-    OUString fqnCpp = entity.module.createSubModule(entity.name).asNamespace();
+    OUString name (entity->getName());
+    OUString entityNameCapitalized (capitalize(name));
+    OUString fqn = entity->type;
+    OUString fqnCpp = Module(fqn).asNamespace();
     rtl::Reference< unoidl::PlainStructTypeEntity > ent (
-            static_cast< unoidl::PlainStructTypeEntity * >(entity.entity.get()));
+            static_cast< unoidl::PlainStructTypeEntity * >(entity->unoidl.get()));
 
-    OUString dataName (capitalize(entity.name));
+    OUString dataName (capitalize(name));
 
     vector< unoidl::PlainStructTypeEntity::Member > members = ent->getDirectMembers();
     vector< Parameter > getterParams;
-    getterParams.push_back({ "hsuno " + fqnCpp + " *", "o" + entity.name }); // FIXME hardcoded type
+    getterParams.push_back({ "hsuno " + fqnCpp + " *", "o" + name }); // FIXME hardcoded type
 
     // getters and setters
     for (vector< unoidl::PlainStructTypeEntity::Member >::const_iterator
             j(members.begin()) ; j != members.end() ; ++j)
     {
+        bool isInterface = false;
+        EntityList::const_iterator entIt = entities.find(j->type);
+        if (entIt != entities.end() && entIt->second->isInterface())
+            isInterface = true;
         // getter
         OUString getterName (functionPrefix + toFunctionPrefix(fqn)
                 + "_get_" + j->name);
         OUString getterType (j->type);
 
         out << std::endl;
-        out << cFunctionDeclaration(getterName, getterParams, j->type) << " {"
-            << std::endl;
-        out << "    return " << (isBasicType(j->type) ? "" : "&")
-            << "o" << entity.name << "->" << j->name << ";"
-            << std::endl;
-        out << "}"
-            << std::endl;
+        out << cFunctionDeclaration(entities, getterName, getterParams,
+                j->type) << " {" << std::endl;
+        if (isInterface) {
+            indent(4);
+            out << toCppType(j->type) << " * p" << j->name << " = o" << name
+                << "->" << j->name << ".get();" << std::endl;
+            indent(4);
+            out << "reinterpret_cast< css::uno::XInterface * >(p" << j->name
+                << ")->acquire();" << std::endl;
+            indent(4);
+            out << "return p" << j->name << ";" <<std::endl;
+        } else if (j->type == "type") {
+            indent(4);
+            out << "typelib_TypeDescription * td = 0;" << std::endl;
+            indent(4);
+            out << "o" << name << "->" << j->name << ".getDescription(&td);"
+                << std::endl;
+            indent(4);
+            out << "return td;" << std::endl;
+        } else {
+            out << "    return ";
+            if (!isBasicType(j->type))
+                out << "&";
+            out << "o" << name << "->" << j->name << ";" << std::endl;
+        }
+        out << "}" << std::endl;
 
         // setter
         OUString setterName (functionPrefix + toFunctionPrefix(fqn)
@@ -61,17 +85,32 @@ void CxxWriter::writePlainStructTypeEntity (Entity const & entity)
         OUString setterType ("void");
         vector< Parameter > setterParams;
 
-        setterParams.push_back({ "hsuno " + fqnCpp + " *", "o" + entity.name }); // FIXME hardcoded type
+        setterParams.push_back({ "hsuno " + fqnCpp + " *", "o" + name }); // FIXME hardcoded type
         setterParams.push_back({ j->type, j->name });
 
         out << std::endl;
-        out << cFunctionDeclaration(setterName, setterParams, setterType) << " {"
-            << std::endl;
-        out << "    o" << entity.name << "->" << j->name << " = ";
-        if (!isBasicType(j->type))
-            out << "*";
-        out << j->name << ";"
-            << std::endl;
+        out << cFunctionDeclaration(entities, setterName, setterParams,
+                setterType) << " {" << std::endl;
+        if (isInterface) {
+            out << "    css::uno::Reference< " << toCppType(j->type) << " > r"
+                << j->name << "(" << j->name << ");" << std::endl;
+        }
+        out << "    o" << name << "->" << j->name << " = ";
+        if (j->type == "type") {
+            out << "css::uno::Type(reinterpret_cast< typelib_TypeDescriptionReference * >("
+                << j->name << "));" << std::endl;
+        } else {
+            if (!isBasicType(j->type) && !isInterface)
+                out << "*";
+            if (j->type == "any") {
+                out << "static_cast< css::uno::Any * >(" << j->name << ");"
+                    << std::endl;
+            } else {
+                if (isInterface)
+                    out << "r";
+                out << j->name << ";" << std::endl;
+            }
+        }
         out << "}"
             << std::endl;
     }
@@ -80,12 +119,13 @@ void CxxWriter::writePlainStructTypeEntity (Entity const & entity)
     // TODO
 }
 
-void CxxWriter::writeInterfaceTypeEntity (Entity const & entity) {
-    Module entityModule = entity.module.createSubModule(entity.name);
+void CxxWriter::writeInterfaceTypeEntity () {
+    OUString name (entity->getName());
+    Module entityModule (entity->type);
     OUString fqn = entityModule.getName();
     OUString fqnCpp = entityModule.asNamespace();
     rtl::Reference<unoidl::InterfaceTypeEntity> ent (
-            static_cast<unoidl::InterfaceTypeEntity *>(entity.entity.get()));
+            static_cast<unoidl::InterfaceTypeEntity *>(entity->unoidl.get()));
 
     vector< unoidl::InterfaceTypeEntity::Method > methods = ent->getDirectMethods();
 
@@ -103,34 +143,17 @@ void CxxWriter::writeInterfaceTypeEntity (Entity const & entity) {
             params.push_back({ k->type, k->name });
 
         out << std::endl;
-        out << cFunctionDeclaration(cMethodName, params, j->returnType) << " {"
-            << std::endl;
-        // prepare interface
-        indent(out, 4);
-        out << "css::uno::Reference< com::sun::star::uno::XInterface > * rIface0 ="
-            << std::endl;
-        indent(out, 8);
-        out << "static_cast< css::uno::Reference< css::uno::XInterface > * >(rIface);"
-            << std::endl;
-        indent(out, 4);
-        out << "css::uno::Reference< " << fqnCpp
-            << " > rIface2 = css::uno::Reference< " << fqnCpp
-            << " >( *rIface0, css::uno::UNO_QUERY);" << std::endl;
-        /* indent(out, 4);
-        out << "css::uno::Reference< " << fqnCpp << " > * rIface2 ="
-            << std::endl;
-        indent(out, 8);
-        out << "static_cast< css::uno::Reference< " << fqnCpp
-            << " > * >(rIface);" << std::endl; */
-        indent(out, 4);
+        out << cFunctionDeclaration(entities, cMethodName, params,
+                j->returnType) << " {" << std::endl;
+        indent(4);
         out << "uno_Interface * iface =" << std::endl;
-        indent(out, 8);
+        indent(8);
         out << "static_cast< uno_Interface * >(g_cpp2uno.mapInterface("
-            << "rIface2.get(), cppu::UnoType< " << fqnCpp << " >::get()));"
+            << "rIface, cppu::UnoType< " << fqnCpp << " >::get()));"
             << std::endl;
         // result type
         if (j->returnType != "void") {
-            indent(out, 4);
+            indent(4);
             if (isBasicType(j->returnType)) {
                 out << toCppType(j->returnType) << " result;";
             } else if (isStringType(j->returnType)) {
@@ -147,13 +170,13 @@ void CxxWriter::writeInterfaceTypeEntity (Entity const & entity) {
         }
         // prepare arguments
         // TODO no need for arguments when there are no parameters
-        indent(out, 4);
+        indent(4);
         out << "void * args [" << j->parameters.size() << "];" << std::endl;
         int argIdx = 0;
         for (std::vector<unoidl::InterfaceTypeEntity::Method::Parameter>::const_iterator
                 k(j->parameters.begin()) ; k != j->parameters.end() ; ++k)
         {
-            indent(out, 4);
+            indent(4);
             out << "args[" << argIdx << "] = ";
             if (isBasicType(k->type)) {
                 out << "&" << k->name;
@@ -167,7 +190,7 @@ void CxxWriter::writeInterfaceTypeEntity (Entity const & entity) {
             ++argIdx;
         }
         // execute the call
-        indent(out, 4);
+        indent(4);
         out << "makeBinaryUnoCall(iface, \"" << fqn << "::" << j->name
             << "\", ";
         if (j->returnType == "void")
@@ -179,7 +202,7 @@ void CxxWriter::writeInterfaceTypeEntity (Entity const & entity) {
         out << ", args, exception);" << std::endl;
         // create result and return
         if (j->returnType != "void") {
-            indent(out, 4);
+            indent(4);
             if (isBasicType(j->returnType)) {
                 out << "return result;";
             } else if (isStringType(j->returnType)) {
@@ -187,13 +210,17 @@ void CxxWriter::writeInterfaceTypeEntity (Entity const & entity) {
             } else if (j->returnType == "any" || isSequenceType(j->returnType)) {
                 out << "return result;";
             } else {
-                // TODO Check non-primitive types for non-interface kinds
+                assert(hasEntityList); // FIXME temporary
                 OUString ns = Module(j->returnType).asNamespace();
-                out << "void * resultIface = g_uno2cpp.mapInterface(result, cppu::UnoType< "
-                    << ns << " >::get());" << std::endl;
-                indent(out, 4);
-                out << "return new css::uno::Reference< " << ns
-                    << " >(static_cast< " << ns << " * >(resultIface));";
+                EntityList::const_iterator entIt = entities.find(j->returnType);
+                if (entIt != entities.end() && entIt->second->isInterface()) {
+                    out << "void * resultIface = g_uno2cpp.mapInterface(result, cppu::UnoType< "
+                        << ns << " >::get());" << std::endl;
+                    indent(4);
+                    out << "return static_cast< " << ns << " * >(resultIface);";
+                } else {
+                    out << "return static_cast< " << ns << " * >(result);";
+                }
             }
             out << std::endl;
         }
@@ -201,24 +228,34 @@ void CxxWriter::writeInterfaceTypeEntity (Entity const & entity) {
     }
 }
 
-void CxxWriter::writeSingleInterfaceBasedServiceEntity (Entity const & entity) {
-    Module entityModule = entity.module.createSubModule(entity.name);
+void CxxWriter::writeSingleInterfaceBasedServiceEntity () {
+    Module entityModule = Module(entity->type);
     rtl::Reference<unoidl::SingleInterfaceBasedServiceEntity> ent (
-            static_cast<unoidl::SingleInterfaceBasedServiceEntity *>(entity.entity.get()));
+            static_cast<unoidl::SingleInterfaceBasedServiceEntity *>(entity->unoidl.get()));
     Module baseModule(ent->getBase());
     OUString baseFqn (baseModule.asNamespace());
 
     OUString cMethodName (functionPrefix
             + toFunctionPrefix(entityModule.getName()) + "_create");
     vector< Parameter > params;
-    params.push_back({OUString("css::uno::XComponentContext"), OUString("context")});
+    params.push_back({OUString("com.sun.star.uno.XComponentContext"), OUString("context")});
 
     out << std::endl;
-    out << cFunctionDeclaration(cMethodName, params, baseFqn)
+    out << cFunctionDeclaration(entities, cMethodName, params, baseFqn)
         << " {" << std::endl;
-    indent(out, 4);
-    out << "return new css::uno::Reference< " << baseFqn << " >("
-        << entityModule.asNamespace() << "::create(*context));" << std::endl;
+    indent(4);
+    out << "css::uno::Reference< css::uno::XComponentContext > xContext (context);"
+        << std::endl;
+    indent(4);
+    out << "css::uno::Reference< " << baseFqn << " > rObj = "
+        << entityModule.asNamespace() << "::create(xContext);" << std::endl;
+    indent(4);
+    out << baseFqn << " * pObj = rObj.get();" << std::endl;
+    indent(4);
+    out << "reinterpret_cast< css::uno::XInterface * >(pObj)->acquire();"
+        << std::endl;
+    indent(4);
+    out << "return pObj;" << std::endl;
     out << "}" << std::endl;
 
     // TODO write constructors

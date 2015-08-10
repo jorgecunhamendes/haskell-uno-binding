@@ -16,18 +16,13 @@ using rtl::OUString;
 using rtl::OUStringBuffer;
 using std::vector;
 
-OUString cFunctionDeclaration(OUString name, vector< Parameter > params,
+OUString cFunctionDeclaration(EntityList const & entities,
+        OUString name, std::vector< Parameter > params,
         OUString type)
 {
     OUStringBuffer buf;
     buf.append("extern \"C\"\n");
-    if (!isSimpleType(type) && !isHsUnoType(type) && !isSequenceType(type)) {
-        buf.append("css::uno::Reference< ");
-        buf.append(toCppType(type));
-        buf.append(" >");
-    } else {
-        buf.append(toCppType(type));
-    }
+    buf.append(toCppType(type));
     if (!isBasicType(type) && !isHsUnoType(type))
         buf.append(" *");
     buf.append(" ");
@@ -38,13 +33,7 @@ OUString cFunctionDeclaration(OUString name, vector< Parameter > params,
     {
         if (it != params.begin())
             buf.append(", ");
-        if (!isSimpleType(it->type) && !isHsUnoType(it->type) && !isSequenceType(it->type)) {
-            buf.append("css::uno::Reference< ");
-            buf.append(toCppType(it->type));
-            buf.append(" >");
-        } else {
-            buf.append(toCppType(it->type));
-        }
+        buf.append(toCppType(it->type));
         if (!isBasicType(it->type) && !isHsUnoType(it->type))
             buf.append(" *");
         buf.append(" ");

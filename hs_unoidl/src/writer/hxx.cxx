@@ -8,17 +8,26 @@
  */
 #include "writer/hxx.hxx"
 
+#include "rtl/ustrbuf.hxx"
 #include "unoidl/unoidl.hxx"
 
 #include "../types.hxx"
 #include "../utils.hxx"
 
 using rtl::OUString;
+using rtl::OUStringBuffer;
 using std::vector;
 
-extern OUString entityHeaderGuardName (Entity const & entity); // FIXME
+OUString entityHeaderGuardName (EntityRef const & entity)
+{
+    OUStringBuffer buf;
+    buf.append(headerGuardPrefix);
+    buf.append(Module(entity->type).asHeaderGuard());
+    buf.append(headerGuardSuffix);
+    return buf.makeStringAndClear();
+}
 
-void HxxWriter::writeOpening (Entity const & entity) {
+void HxxWriter::writeOpening () {
     const OUString headerGuardName (entityHeaderGuardName(entity));
     out << "#ifndef " << headerGuardName << std::endl;
     out << "#define " << headerGuardName << std::endl;
@@ -28,25 +37,26 @@ void HxxWriter::writeOpening (Entity const & entity) {
     out << "#include \"uno/mapping.hxx\"" << std::endl;
 }
 
-void HxxWriter::writeClosing (Entity const & entity) {
+void HxxWriter::writeClosing () {
     const OUString headerGuardName (entityHeaderGuardName(entity));
     out << std::endl;
     out << "#endif // " << headerGuardName << std::endl;
 }
 
-void HxxWriter::writePlainStructTypeEntity (Entity const & entity) {
-    Module entityModule = entity.module.createSubModule(entity.name);
-    OUString entityNameCapitalized (capitalize(entity.name));
-    OUString fqn = entityModule.getName();
+void HxxWriter::writePlainStructTypeEntity () {
+    Module entityModule = Module(entity->type);
+    OUString name = entity->getName();
+    OUString entityNameCapitalized (capitalize(name));
+    OUString fqn = entity->type;
     OUString fqnCpp = entityModule.asNamespace();
     rtl::Reference< unoidl::PlainStructTypeEntity > ent (
-            static_cast< unoidl::PlainStructTypeEntity * >(entity.entity.get()));
+            static_cast< unoidl::PlainStructTypeEntity * >(entity->unoidl.get()));
 
     out << "#include \"" << entityModule.asPath() << ".hpp\"" << std::endl;
 
     vector< unoidl::PlainStructTypeEntity::Member > members = ent->getDirectMembers();
     vector< Parameter > getterParams;
-    getterParams.push_back({ "hsuno " + fqnCpp + " *", "o" + entity.name }); // FIXME hardcoded type
+    getterParams.push_back({ "hsuno " + fqnCpp + " *", "o" + name }); // FIXME hardcoded type
 
     // getters and setters
     for (vector< unoidl::PlainStructTypeEntity::Member >::const_iterator
@@ -58,8 +68,9 @@ void HxxWriter::writePlainStructTypeEntity (Entity const & entity) {
         OUString getterType (j->type);
 
         out << std::endl;
-        out << cFunctionDeclaration(getterName, getterParams, j->type) << ";"
-            << std::endl;
+        assert(hasEntityList); // FIXME temporary
+        out << cFunctionDeclaration(entities, getterName, getterParams,
+                j->type) << ";" << std::endl;
 
         // setter
         OUString setterName (functionPrefix + toFunctionPrefix(fqn)
@@ -67,23 +78,24 @@ void HxxWriter::writePlainStructTypeEntity (Entity const & entity) {
         OUString setterType ("void");
         vector< Parameter > setterParams;
 
-        setterParams.push_back({ "hsuno " + fqnCpp + " *", "o" + entity.name }); // FIXME hardcoded type
+        setterParams.push_back({ "hsuno " + fqnCpp + " *", "o" + name }); // FIXME hardcoded type
         setterParams.push_back({ j->type, j->name });
 
         out << std::endl;
-        out << cFunctionDeclaration(setterName, setterParams, setterType) << ";"
-            << std::endl;
+        assert(hasEntityList); // FIXME temporary
+        out << cFunctionDeclaration(entities, setterName, setterParams,
+                setterType) << ";" << std::endl;
     }
 
     // constructor
     // TODO
 }
 
-void HxxWriter::writeInterfaceTypeEntity (Entity const & entity) {
-    Module entityModule = entity.module.createSubModule(entity.name);
-    OUString fqn = entity.module.createSubModule(entity.name).getName();
+void HxxWriter::writeInterfaceTypeEntity () {
+    Module entityModule = Module(entity->type);
+    OUString fqn = entity->type;
     rtl::Reference<unoidl::InterfaceTypeEntity> ent (
-            static_cast<unoidl::InterfaceTypeEntity *>(entity.entity.get()));
+            static_cast<unoidl::InterfaceTypeEntity *>(entity->unoidl.get()));
 
     out << "#include \"" << entityModule.asPath() << ".hpp\"" << std::endl;
 
@@ -103,15 +115,16 @@ void HxxWriter::writeInterfaceTypeEntity (Entity const & entity) {
             params.push_back({ k->type, k->name });
 
         out << std::endl;
-        out << cFunctionDeclaration(cMethodName, params, j->returnType) << ";"
-            << std::endl;
+        assert(hasEntityList); // FIXME temporary
+        out << cFunctionDeclaration(entities, cMethodName, params,
+                j->returnType) << ";" << std::endl;
     }
 }
 
-void HxxWriter::writeSingleInterfaceBasedServiceEntity (Entity const & entity) {
-    Module entityModule = entity.module.createSubModule(entity.name);
+void HxxWriter::writeSingleInterfaceBasedServiceEntity () {
+    Module entityModule = Module(entity->type);
     rtl::Reference<unoidl::SingleInterfaceBasedServiceEntity> ent (
-            static_cast<unoidl::SingleInterfaceBasedServiceEntity *>(entity.entity.get()));
+            static_cast<unoidl::SingleInterfaceBasedServiceEntity *>(entity->unoidl.get()));
     Module baseModule(ent->getBase());
     OUString baseFqn (baseModule.asNamespace());
 
@@ -120,10 +133,11 @@ void HxxWriter::writeSingleInterfaceBasedServiceEntity (Entity const & entity) {
     OUString cMethodName (functionPrefix
             + toFunctionPrefix(entityModule.getName()) + "_create");
     vector< Parameter > params;
-    params.push_back({OUString("css::uno::XComponentContext"), OUString("context")});
+    params.push_back({OUString("com.sun.star.uno.XComponentContext"), OUString("context")});
 
     out << std::endl;
-    out << cFunctionDeclaration(cMethodName, params, baseFqn) << ";"
+    assert(hasEntityList); // FIXME temporary
+    out << cFunctionDeclaration(entities, cMethodName, params, baseFqn) << ";"
         << std::endl;
 
     // TODO write constructors

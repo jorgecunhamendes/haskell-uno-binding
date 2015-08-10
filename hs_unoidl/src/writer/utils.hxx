@@ -13,13 +13,16 @@
 #include <ostream>
 #include <vector>
 
+#include "../entity.hxx"
+
 typedef struct _Parameter {
     rtl::OUString type;
     rtl::OUString name;
 } Parameter;
 
-rtl::OUString cFunctionDeclaration(rtl::OUString name,
-        std::vector< Parameter > params, rtl::OUString type);
+rtl::OUString cFunctionDeclaration(EntityList const & entities,
+        rtl::OUString name, std::vector< Parameter > params,
+        rtl::OUString type);
 
 void indent (std::ostream & out, int n);
 
