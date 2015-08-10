@@ -9,5 +9,8 @@ import Foreign
 
 import Com.Sun.Star.Lang
 
-data XInterfaceRef
-data XComponentContextRef
+type    XInterfacePtr = Ptr ()
+newtype XInterfaceRef = XInterfaceRef { unXInterfaceRef :: ForeignPtr () }
+
+type    XComponentContextPtr = Ptr ()
+newtype XComponentContextRef = XComponentContextRef { unXComponentContextRef :: ForeignPtr () }

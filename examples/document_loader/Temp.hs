@@ -5,5 +5,5 @@ import Foreign
 
 data Sequence a
 
-instance Service (Ptr a) where
-  getInterface = castPtr
+instance Service (ForeignPtr a) where
+  getInterface = castForeignPtr

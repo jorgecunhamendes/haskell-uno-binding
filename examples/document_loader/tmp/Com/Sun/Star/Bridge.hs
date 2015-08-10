@@ -9,3 +9,6 @@ import Data.Text (Text)
 import Foreign
 
 import Com.Sun.Star.Uno
+
+type    XUnoUrlResolverPtr = Ptr ()
+newtype XUnoUrlResolverRef = XUnoUrlResolverRef { unXUnoUrlResolverRef :: ForeignPtr () }

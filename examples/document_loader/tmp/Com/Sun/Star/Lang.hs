@@ -7,5 +7,9 @@ import Data.Int
 import Data.Word
 import Foreign
 
-data XMultiComponentFactoryRef
-data XComponentRef
+
+type    XComponentPtr = Ptr ()
+newtype XComponentRef = XComponentRef { unXComponentRef :: ForeignPtr () }
+
+type    XMultiComponentFactoryPtr = Ptr ()
+newtype XMultiComponentFactoryRef = XMultiComponentFactoryRef { unXMultiComponentFactoryRef :: ForeignPtr () }
