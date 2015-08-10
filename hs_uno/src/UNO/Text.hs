@@ -9,6 +9,8 @@ import           Foreign.Ptr
 data OUString
 data UString
 
+type OUStringPtr = Ptr OUString
+
 hs_text_to_oustring :: Text -> IO (Ptr OUString)
 hs_text_to_oustring text = T.useAsPtr text
   $ \ buf len -> c_oustring_new buf (fromIntegral len)

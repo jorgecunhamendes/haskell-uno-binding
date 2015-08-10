@@ -7,14 +7,18 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-#include <com/sun/star/uno/Type.h>
+#include "rtl/ustring.hxx"
 #include "typelib/typedescription.h"
 
-typelib_TypeDescription * css_uno_Type_getDescription (css::uno::TypeClass tc,
-        const char * t)
-{
+extern "C"
+sal_Int32 typelib_typedescription_getSize (typelib_TypeDescription const * td) {
+    return td->nSize;
+}
+
+extern "C"
+typelib_TypeDescription * hsuno_getTypeDescriptionByName (rtl::OUString const * psName) {
     typelib_TypeDescription * td = 0;
-    css::uno::Type(tc, t).getDescription(&td);
+    typelib_typedescription_getByName(&td, psName->pData);
     return td;
 }
 

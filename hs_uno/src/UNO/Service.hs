@@ -5,4 +5,4 @@ import UNO.Binary
 import Foreign
 
 class Service a where
-    getInterface :: a -> Ptr UnoInterface
+    getInterface :: a -> ForeignPtr b

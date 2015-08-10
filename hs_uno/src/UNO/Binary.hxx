@@ -29,6 +29,6 @@ extern "C"
 sal_Int64 anyToInt64 (uno_Any * any);
 
 extern "C"
-css::uno::Reference< css::uno::XInterface > * anyToInterface (uno_Any * any);
+void * anyToInterface (uno_Any * any, bool unoMap = true);
 
 #endif // HSUNO_UNO_BINARY_H
