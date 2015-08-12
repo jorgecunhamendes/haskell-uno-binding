@@ -120,10 +120,10 @@ inline
 void insertDependency (std::set< OUString > & dependencies,
         rtl::Reference< Entity > & entity, OUString const & type)
 {
-    if (!isSimpleType(type)) {
-        OUString dependency (type);
-        if (isSequenceType(type))
-            dependency = type.copy(2);
+    OUString dependency (type);
+    if (isSequenceType(type))
+        dependency = type.copy(2);
+    if (!isSimpleType(dependency)) {
         dependencies.insert(dependency);
         entity->dependencies.insert(dependency);
     }
