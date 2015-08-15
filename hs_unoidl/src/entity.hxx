@@ -44,5 +44,7 @@ typedef rtl::Reference< Entity > EntityRef;
 
 typedef std::map< rtl::OUString, EntityRef > EntityList;
 
+typedef std::map< rtl::OUString, EntityList > ModuleList;
+
 #endif /* HSUNOIDL_ENTITY_HXX */
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

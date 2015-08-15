@@ -120,4 +120,17 @@ void writeSingleInterfaceBasedService (EntityList const & entities,
     hs.writeSingleInterfaceBasedServiceEntity();
 }
 
+void writeModule (ModuleList const & modules, const EntityRef & entity) {
+    const OUString filePath ("gen/" + Module(entity->type).asPathCapitalized());
+
+    ModuleList::const_iterator entitiesIt = modules.find(entity->type);
+    assert(entitiesIt != modules.end());
+    EntityList entities = entitiesIt->second;
+
+    OUString hsFilePath = filePath + hsFileExtension;
+    HsWriter hs (File::getFileUrlFromPath(hsFilePath), entity, entities);
+    hs.writeOpening();
+    hs.writeModule();
+}
+
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

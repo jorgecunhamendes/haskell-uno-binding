@@ -359,6 +359,27 @@ void HsWriter::writeSingleInterfaceBasedServiceEntity () {
     }
 }
 
+void HsWriter::writeModule () {
+    assert(hasEntityList);
+
+    for (EntityList::const_iterator it (entities.begin()) ;
+            it != entities.end() ; ++it)
+    {
+        out << std::endl;
+        out << "data " << it->second->getName() << std::endl;
+        if (it->second->isInterface()) {
+            out << "instance IsUnoType " << it->second->getName() << " where"
+                << std::endl;
+            indent(4);
+            out << "getUnoTypeClass _ = Typelib_TypeClass_INTERFACE"
+                << std::endl;
+            indent(4);
+            out << "getUnoTypeName _ = \"" << it->second->type << "\""
+                << std::endl;
+        }
+    }
+}
+
 set< OUString > HsWriter::plainStructTypeEntityDependencies () {
     set< OUString > deps;
     deps.insert(entity->getModule().getNameCapitalized());

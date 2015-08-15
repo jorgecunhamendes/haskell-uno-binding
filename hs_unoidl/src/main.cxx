@@ -237,6 +237,26 @@ void generateCode (EntityList const & entities) {
     }
 }
 
+void generateModules (EntityList const & entities) {
+    ModuleList modules;
+    // populate modules
+    for (EntityList::const_iterator it (entities.begin()) ;
+            it != entities.end() ; ++it)
+    {
+        Module m (it->second->type);
+        modules[m.getParent().getName()].insert(
+                EntityList::value_type(it->second->type, it->second));
+    }
+    // write modules
+    for (ModuleList::const_iterator it (modules.begin()) ;
+            it != modules.end() ; ++it)
+    {
+        EntityRef entity = new Entity;
+        entity->type = it->first;
+        writeModule(modules, entity);
+    }
+}
+
 SAL_IMPLEMENT_MAIN() {
     try {
         std::vector< OUString > providers;
@@ -325,6 +345,8 @@ SAL_IMPLEMENT_MAIN() {
         updateImplementedInterfaces(manager, entities);
         // generate code for each type
         generateCode(entities);
+        // generate code for each module
+        generateModules(entities);
         return EXIT_SUCCESS;
     } catch (unoidl::FileFormatException & e1) {
         std::cerr

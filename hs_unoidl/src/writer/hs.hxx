@@ -47,6 +47,8 @@ class HsWriter : public Writer {
         void writeExceptionTypeEntity ();
         // - single-interface-based service type
         void writeSingleInterfaceBasedServiceEntity ();
+        // UNO Entity module
+        void writeModule ();
         // auxiliary methods
         std::set< rtl::OUString > plainStructTypeEntityDependencies ();
         std::set< rtl::OUString > interfaceTypeEntityDependencies ();
