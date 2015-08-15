@@ -30,3 +30,14 @@ OUString * oustringFromUString (rtl_uString * ustr) {
   OUString * str = new OUString (ustr, SAL_NO_ACQUIRE);
   return str;
 }
+
+extern "C" {
+
+// FIXME This can be written directly in Haskell.
+rtl_uString * hsuno_uString_new (sal_Unicode * buf, sal_Int32 len) {
+    rtl_uString * str = 0;
+    rtl_uString_newFromStr_WithLength(&str, buf, len);
+    return str;
+}
+
+}

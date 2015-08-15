@@ -7,7 +7,6 @@ import           Data.Word
 import           Foreign.Ptr
 
 data OUString
-data UString
 
 type OUStringPtr = Ptr OUString
 
@@ -50,3 +49,26 @@ foreign import ccall "oustringGetUString" c_oustringGetUString
 -- OUString * oustringFromUString (rtl_uString * ustr);
 foreign import ccall "oustringFromUString" c_oustringFromUString
   :: Ptr UString -> IO (Ptr OUString)
+
+-- *UString
+
+data UString
+
+uStringNew :: Text -> IO (Ptr UString)
+uStringNew text = T.useAsPtr text
+  $ \ buf len -> hsuno_uString_new buf (fromIntegral len)
+
+uStringToText :: Ptr UString -> IO Text
+uStringToText ustrPtr = do
+  buf <- uStringGetStr ustrPtr
+  len <- uStringGetLength ustrPtr
+  T.fromPtr buf (fromIntegral len)
+
+foreign import ccall unsafe "hsuno_uString_new" hsuno_uString_new
+  :: Ptr Word16 -> Int32 -> IO (Ptr UString)
+
+foreign import ccall unsafe "rtl_uString_getLength" uStringGetLength
+  :: Ptr UString -> IO Int32
+
+foreign import ccall unsafe "rtl_uString_getStr" uStringGetStr
+  :: Ptr UString -> IO (Ptr Word16)
