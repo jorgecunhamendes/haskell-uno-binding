@@ -18,7 +18,7 @@ executable document-loader
   main-is:             Main.hs
   -- other-modules:       
   other-extensions:    OverloadedStrings, FlexibleInstances
-  hs-source-dirs:      ., tmp
+  hs-source-dirs:      .
   build-depends:       base >=4.6
                      , text
                      , hs-uno
