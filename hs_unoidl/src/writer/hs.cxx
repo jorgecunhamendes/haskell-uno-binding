@@ -18,11 +18,11 @@ using std::set;
 using rtl::OUString;
 
 void HsWriter::writeOpening (set< OUString > const & deps) {
+    out << "{-# LANGUAGE OverloadedStrings #-} " << std::endl;
     out << "module " << Module(entity->type).getNameCapitalized()
         << " where" << std::endl;
     out << std::endl;
     out << "import UNO" << std::endl;
-    out << "import Temp" << std::endl; // FIXME this is temporary code for the document-loader example
     out << std::endl;
     out << "import Control.Applicative ((<$>))" << std::endl;
     out << "import Control.Monad (when)" << std::endl;
@@ -145,15 +145,6 @@ void HsWriter::writeInterfaceTypeEntity () {
     OUString fqn = entity->type;
     vector< unoidl::InterfaceTypeEntity::Method > members = ent->getDirectMethods();
 
-    // interface class
-    out << "class " << entityNameCapitalized << " a where" << std::endl;
-    out << "    query" << entityNameCapitalized << " :: a -> IO " << toHsType(fqn)
-        << std::endl;
-    out << std::endl;
-    out << "instance " << entityNameCapitalized << " " << toHsType(fqn)
-        << " where" << std::endl;
-    out << "    query" << entityNameCapitalized << " = return" << std::endl;
-
     for (vector<unoidl::InterfaceTypeEntity::Method>::const_iterator
             m(members.begin()) ; m != members.end() ; ++m)
     {
@@ -166,7 +157,7 @@ void HsWriter::writeInterfaceTypeEntity () {
 
         unsigned int level = 0;
 
-        methodParams.push_back({ fqn, OUString("(" + entityNameCapitalized + "Ref fpIface)") });
+        methodParams.push_back({ fqn, OUString("rIface") });
         for (vector<unoidl::InterfaceTypeEntity::Method::Parameter>::const_iterator
                 p(m->parameters.begin()) ; p != m->parameters.end() ; ++p) {
             OUString paramName (decapitalize(p->name));
@@ -188,6 +179,7 @@ void HsWriter::writeInterfaceTypeEntity () {
                 k(m->parameters.begin());
                 k != m->parameters.end(); ++k)
         {
+            OUString argType (k->type);
             OUString name (decapitalize(k->name));
             if (isStringType(k->type)) {
                 OUString s (hsTypeCxxPrefix(k->type) + name);
@@ -196,21 +188,42 @@ void HsWriter::writeInterfaceTypeEntity () {
                 out << s << " <- hs_text_to_oustring " << name << std::endl;
                 // FIXME Check if the OUString is destructed.
                 // If not, create a function "withOUStringText" that handles that.
-            } else if (!isPrimitiveType(k->type) && !isSequenceType(k->type)) {
+            } else if (argType == "any") {
                 OUString s ("p" + name);
                 arguments.push_back(s);
                 indent(level);
-                out << "withForeignPtr (un"
-                    << toHsType(Module(k->type).getLastName())
-                    << " " << name << ") $ \\ " << s << " -> do " << std::endl;
+                out << "withAny " << name << " $ \\ " << s << " -> do "
+                    << std::endl;
                 level += 2;
             } else {
-                arguments.push_back(name);
+                bool argIsInterface = false;
+                {
+                    EntityList::const_iterator entIt = entities.find(argType);
+                    if (entIt != entities.end() && entIt->second->isInterface())
+                        argIsInterface = true;
+                }
+                if (argIsInterface) {
+                    OUString s ("p" + name);
+                    arguments.push_back(s);
+                    indent(level);
+                    out << "withReference " << name << " $ \\ " << s
+                        << " -> do " << std::endl;
+                    level += 2;
+                } else if (!isPrimitiveType(k->type) && !isSequenceType(k->type)) {
+                    OUString s ("p" + name);
+                    arguments.push_back(s);
+                    indent(level);
+                    out << "withForeignPtr " << name << " $ \\ " << s << " -> do "
+                        << std::endl;
+                    level += 2;
+                } else {
+                    arguments.push_back(name);
+                }
             }
         }
-        // get argument pointer
+        // get interface pointer
         indent(level);
-        out << "withForeignPtr fpIface $ \\ iface -> do" << std::endl;
+        out << "withReference rIface $ \\ pIface -> do" << std::endl;
         level += 2;
         // prepare exception pointer
         indent(level);
@@ -218,7 +231,7 @@ void HsWriter::writeInterfaceTypeEntity () {
         level += 2;
         // run method
         indent(level);
-        out << "result <- " << hsForeignMethodName << " iface exceptionPtr";
+        out << "result <- " << hsForeignMethodName << " pIface exceptionPtr";
         for (std::vector< OUString >::const_iterator
                 k(arguments.begin()); k != arguments.end(); ++k)
         {
@@ -231,35 +244,41 @@ void HsWriter::writeInterfaceTypeEntity () {
         indent(level);
         out << "when (aException /= nullPtr) (error \"exceptions not yet implemented\")"
             << std::endl;
+        bool isInterface = false;
+        {
+            EntityList::const_iterator entIt = entities.find(m->returnType);
+            if (entIt != entities.end() && entIt->second->isInterface())
+                isInterface = true;
+        }
         // return
-        if (isBasicType(m->returnType)) {
-            indent(level);
+        indent(level);
+        if (type == "void") {
+            out << "return ()" << std::endl;
+        } else if (type == "any") {
+            out << "anyFromUno (castPtr result)" << std::endl;
+        } else if (isBasicType(m->returnType)) {
             out << "return result" << std::endl;
+        } else if (isInterface) {
+            out << "mkReference result" << std::endl;
         } else {
             OUString methodResult;
             methodResult = "methodResult";
             if (m->returnType == "string") {
-                indent(level);
                 out << "methodResult <- hs_oustring_to_text result" << std::endl;
                 indent(level);
                 out << "c_delete_oustring result" << std::endl;
-            } else if (m->returnType == "[]string") { // FIXME
                 indent(level);
+            } else if (m->returnType == "[]string") { // FIXME
                 out << "fpResult <- FC.newForeignPtr result (sequenceRelease result)"
                     << std::endl;
                 indent(level);
                 out << "methodResult <- fromSequence fpResult" << std::endl;
+                indent(level);
             } else if (isSequenceType(m->returnType)) { // FIXME
                 methodResult = "result";
             } else {
-                indent(level);
-                out << "fpResult <- newForeignPtr cInterfaceReleasePtr result"
-                    << std::endl;
-                indent(level);
-                out << "let methodResult = " << toHsType(m->returnType)
-                    << " fpResult" << std::endl;
+                methodResult = "result";
             }
-            indent(level);
             out << "return " << methodResult << std::endl;
         }
     }
@@ -306,44 +325,24 @@ void HsWriter::writeSingleInterfaceBasedServiceEntity () {
     // entity base fully qualified name
     OUString eBaseFQN(eBaseModule.asNamespace());
 
-    out << "data " << entityNameCapitalized << " = " << entityNameCapitalized
-        << " " << toHsType(sEntityBase) << std::endl;
-    out << std::endl;
-    out << "instance " << sEntityBaseLastNameCapitalized << " "
-        << entityNameCapitalized << " where"<< std::endl;
-    out << "    query" << sEntityBaseLastNameCapitalized << " ("
-        << entityNameCapitalized << " fptr) = return fptr" << std::endl;
-    //for (std::set< OUString >::const_iterator
-    //        it (entity->interfaces.begin()) ;
-    //        it != entity->interfaces.end() ; ++it)
-    //{
-    //    out << std::endl;
-    //    out << "instance " << Module(*it).getNameCapitalized() << std::endl;
-    //}
-
     // create method
     OUString hsImportMethodName ("c" + entityNameCapitalized + "_create");
     {
-        int level = 4;
         OUString hsMethodName (decapitalize(entityName) + "Create");
         vector< OUString > classes;
         vector< Parameter > methodParams;
-        methodParams.push_back({ OUString("hsuno Ptr Context"), OUString("context") });
-        OUString methodType ("hsuno " + entityNameCapitalized);
+        methodParams.push_back({ OUString("com.sun.star.uno.XComponentContext"),
+                OUString("rContext") });
+        OUString methodType (sEntityBase);
 
-        out << std::endl;
         writeFunctionType(hsMethodName, classes, methodParams, methodType);
 
         out << std::endl;
         writeFunctionLHS(hsMethodName, methodParams);
-        out << " do" << std::endl;
-        indent(level);
-        out << "ptr <- " << hsImportMethodName << " context" << std::endl;
-        indent(level);
-        out << "fptr <- newForeignPtr cInterfaceReleasePtr ptr" << std::endl;
-        indent(level);
-        out << "return (" << entityNameCapitalized << " ("
-            << sEntityBaseLastNameCapitalized << "Ref fptr))" << std::endl;
+        out << "withReference rContext $ \\ pContext -> " << std::endl;
+        indent(4);
+        out << hsImportMethodName << " pContext" << " >>= mkReference"
+            << std::endl;
     }
 
     // foreign import
@@ -351,7 +350,7 @@ void HsWriter::writeSingleInterfaceBasedServiceEntity () {
         OUString cMethodName (functionPrefix + toFunctionPrefix(entityFullName)
                 + "_create");
         vector< OUString > importMethodParams;
-        importMethodParams.push_back("hsuno Ptr Context");
+        importMethodParams.push_back("com.sun.star.uno.XComponentContext");
         OUString methodType (sEntityBase);
 
         out << std::endl;
@@ -413,6 +412,7 @@ set< OUString > HsWriter::singleInterfaceBasedServiceEntityDependencies () {
             static_cast<unoidl::SingleInterfaceBasedServiceEntity *>(entity->unoidl.get()));
     deps.insert(Module(ent->getBase()).getParent().getNameCapitalized());
     deps.insert(Module(ent->getBase()).getNameCapitalized());
+    deps.insert("Com.Sun.Star.Uno");
     return deps;
 }
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

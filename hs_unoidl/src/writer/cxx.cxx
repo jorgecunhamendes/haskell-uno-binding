@@ -136,21 +136,21 @@ void CxxWriter::writeInterfaceTypeEntity () {
                 + j->name);
 
         std::vector< Parameter > params;
-        params.push_back({ OUString("hsuno_interface"), OUString("rIface") });
+        params.push_back({ OUString("hsuno_interface"), OUString("iface") });
         params.push_back({ OUString("hsuno_exception_ptr"), OUString("exception") });
         for (std::vector<unoidl::InterfaceTypeEntity::Method::Parameter>::const_iterator
                 k(j->parameters.begin()) ; k != j->parameters.end() ; ++k)
             params.push_back({ k->type, k->name });
 
+        bool isInterface = false;
+        {
+            EntityList::const_iterator entIt = entities.find(j->returnType);
+            if (entIt != entities.end() && entIt->second->isInterface())
+                isInterface = true;
+        }
         out << std::endl;
         out << cFunctionDeclaration(entities, cMethodName, params,
-                j->returnType) << " {" << std::endl;
-        indent(4);
-        out << "uno_Interface * iface =" << std::endl;
-        indent(8);
-        out << "static_cast< uno_Interface * >(g_cpp2uno.mapInterface("
-            << "rIface, cppu::UnoType< " << fqnCpp << " >::get()));"
-            << std::endl;
+                isInterface ? "hsuno_interface" : j->returnType) << " {" << std::endl;
         // result type
         if (j->returnType != "void") {
             indent(4);
@@ -210,16 +210,11 @@ void CxxWriter::writeInterfaceTypeEntity () {
             } else if (j->returnType == "any" || isSequenceType(j->returnType)) {
                 out << "return result;";
             } else {
-                assert(hasEntityList); // FIXME temporary
-                OUString ns = Module(j->returnType).asNamespace();
-                EntityList::const_iterator entIt = entities.find(j->returnType);
-                if (entIt != entities.end() && entIt->second->isInterface()) {
-                    out << "void * resultIface = g_uno2cpp.mapInterface(result, cppu::UnoType< "
-                        << ns << " >::get());" << std::endl;
-                    indent(4);
-                    out << "return static_cast< " << ns << " * >(resultIface);";
+                if (isInterface) {
+                    out << "return (uno_Interface *)result;";
                 } else {
-                    out << "return static_cast< " << ns << " * >(result);";
+                    OUString ns = Module(j->returnType).asNamespace();
+                    out << "return (" << ns << " *)result;";
                 }
             }
             out << std::endl;
@@ -229,33 +224,18 @@ void CxxWriter::writeInterfaceTypeEntity () {
 }
 
 void CxxWriter::writeSingleInterfaceBasedServiceEntity () {
-    Module entityModule = Module(entity->type);
-    rtl::Reference<unoidl::SingleInterfaceBasedServiceEntity> ent (
-            static_cast<unoidl::SingleInterfaceBasedServiceEntity *>(entity->unoidl.get()));
-    Module baseModule(ent->getBase());
-    OUString baseFqn (baseModule.asNamespace());
-
-    OUString cMethodName (functionPrefix
-            + toFunctionPrefix(entityModule.getName()) + "_create");
+    OUString cMethodName (functionPrefix + toFunctionPrefix(entity->type)
+            + "_create");
     vector< Parameter > params;
-    params.push_back({OUString("com.sun.star.uno.XComponentContext"), OUString("context")});
+    params.push_back({OUString("hsuno_interface"), OUString("pContext")});
 
     out << std::endl;
-    out << cFunctionDeclaration(entities, cMethodName, params, baseFqn)
+    out << cFunctionDeclaration(entities, cMethodName, params, "hsuno_interface")
         << " {" << std::endl;
-    indent(4);
-    out << "css::uno::Reference< css::uno::XComponentContext > xContext (context);"
-        << std::endl;
-    indent(4);
-    out << "css::uno::Reference< " << baseFqn << " > rObj = "
-        << entityModule.asNamespace() << "::create(xContext);" << std::endl;
-    indent(4);
-    out << baseFqn << " * pObj = rObj.get();" << std::endl;
-    indent(4);
-    out << "reinterpret_cast< css::uno::XInterface * >(pObj)->acquire();"
-        << std::endl;
-    indent(4);
-    out << "return pObj;" << std::endl;
+    out << "return hsunoCreateInstanceWithContextFromAscii(\""
+        << entity->type
+        << "\", pContext);" << std::endl;
+
     out << "}" << std::endl;
 
     // TODO write constructors

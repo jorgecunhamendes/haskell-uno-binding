@@ -116,8 +116,15 @@ void HxxWriter::writeInterfaceTypeEntity () {
 
         out << std::endl;
         assert(hasEntityList); // FIXME temporary
+        bool isInterface = false;
+        {
+            EntityList::const_iterator entIt = entities.find(j->returnType);
+            if (entIt != entities.end() && entIt->second->isInterface())
+                isInterface = true;
+        }
+        out << std::endl;
         out << cFunctionDeclaration(entities, cMethodName, params,
-                j->returnType) << ";" << std::endl;
+                isInterface ? "hsuno_interface" : j->returnType) << ";" << std::endl;
     }
 }
 
@@ -133,11 +140,11 @@ void HxxWriter::writeSingleInterfaceBasedServiceEntity () {
     OUString cMethodName (functionPrefix
             + toFunctionPrefix(entityModule.getName()) + "_create");
     vector< Parameter > params;
-    params.push_back({OUString("com.sun.star.uno.XComponentContext"), OUString("context")});
+    params.push_back({OUString("hsuno_interface"), OUString("pContext")});
 
     out << std::endl;
     assert(hasEntityList); // FIXME temporary
-    out << cFunctionDeclaration(entities, cMethodName, params, baseFqn) << ";"
+    out << cFunctionDeclaration(entities, cMethodName, params, "hsuno_interface") << ";"
         << std::endl;
 
     // TODO write constructors

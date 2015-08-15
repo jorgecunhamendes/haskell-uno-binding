@@ -58,7 +58,7 @@ OUString toCppType (OUString const & name)
 {
     if (name.compareTo("hsuno ", 6) == 0)
         return name.copy(6);
-    if (name == "hsuno_interface") return OUString("void *");
+    if (name == "hsuno_interface") return OUString("uno_Interface *");
     if (name == "hsuno_exception_ptr") return OUString("uno_Any **");
     if (name == "void") return OUString("void");
     if (name == "boolean") return OUString("bool");
@@ -98,7 +98,7 @@ OUString toHsType (OUString const & name)
     if (name == "string") return OUString("Text");
     //if (name == "type") return OUString("TypeDescription");
     if (name == "type") return OUString("CssUnoTypePtr");
-    if (name == "any") return OUString("AnyRef");
+    if (name == "any") return OUString("Any");
     OUString result;
     if (name == "[]string") {
         result = "[" + toHsType(name.copy(2)) + "]";
@@ -106,7 +106,7 @@ OUString toHsType (OUString const & name)
         result = "(Ptr (CSequence ()))";
         //result = "(Ptr (CSequence " + toHsType(name.copy(2)) + "))";
     } else {
-        result = Module(name).getNameCapitalized() + "Ref";
+        result = "(Reference " + Module(name).getNameCapitalized() + ")";
     }
     return result;
 }
@@ -135,7 +135,7 @@ OUString toHsCppType (OUString const & name)
         result = "(Ptr (CSequence ()))";
         //result = "(Ptr (CSequence " + toHsCppType(name.copy(2)) + "))";
     } else {
-        result = Module(name).getNameCapitalized() + "Ptr";
+        result = "(Ptr " + Module(name).getNameCapitalized() + ")";
     }
     return result;
 }

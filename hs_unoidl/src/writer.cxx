@@ -46,7 +46,7 @@ void writePlainStruct (EntityList const & entities, EntityRef const & entity) {
 
     // hs
     OUString hsFilePath = filePath + hsFileExtension;
-    HsWriter hs (File::getFileUrlFromPath(hsFilePath), entity);
+    HsWriter hs (File::getFileUrlFromPath(hsFilePath), entity, entities);
     hs.writeOpening(hs.plainStructTypeEntityDependencies());
     hs.writePlainStructTypeEntity();
 }
@@ -69,7 +69,7 @@ void writeInterface (EntityList const & entities, EntityRef const & entity) {
 
     // hs
     OUString hsFilePath = filePath + hsFileExtension;
-    HsWriter hs (File::getFileUrlFromPath(hsFilePath), entity);
+    HsWriter hs (File::getFileUrlFromPath(hsFilePath), entity, entities);
     hs.writeOpening(hs.interfaceTypeEntityDependencies());
     hs.writeInterfaceTypeEntity();
 }
