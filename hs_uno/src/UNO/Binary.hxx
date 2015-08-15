@@ -10,14 +10,60 @@
 
 using ::com::sun::star::uno::Exception;
 
-extern css::uno::Reference<css::uno::XComponentContext> g_context;
-extern css::uno::Mapping g_cpp2uno;
-extern css::uno::Mapping g_uno2cpp;
+extern "C"
+uno_Interface * hsunoQueryInterface (uno_Interface * iface,
+    typelib_TypeDescriptionReference * pType);
+
+extern "C"
+uno_Interface * hsunoQueryInterfaceByName (uno_Interface * iface,
+    rtl_uString * psName);
+
+extern "C"
+uno_Interface * hsunoCreateInstanceWithContext (rtl_uString * sServiceSpecifier,
+    uno_Interface * pContext);
+
+extern "C"
+uno_Interface * hsunoCreateInstanceWithContextFromAscii (
+    const char * sServiceSpecifier, uno_Interface * pContext);
 
 extern "C"
 void makeBinaryUnoCall(
     uno_Interface * interface, char const * methodType, void * result,
     void ** arguments, uno_Any ** exception);
+
+/** UNO Any Functions */
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/** The size of an uno_Any C structure.
+ */
+int hsuno_any_structSize ();
+
+/** Retrieve the type class the value contained within the Any.
+ */
+int hsuno_any_getTypeClass (uno_Any * pAny);
+
+/** Retrieve the type name the value contained within the Any.
+ */
+rtl_uString * hsuno_any_getTypeName (uno_Any * pAny);
+
+/** Retrieve the value contained within the Any.
+ *
+ * Note: when the value is an interface, it returns a pointer to it.
+ */
+void * hsuno_any_getValue (uno_Any * pAny);
+
+/** Destroys an Any, releasing the interface it contains if any.
+ */
+void hsuno_any_destruct (uno_Any * pAny, uno_ReleaseFunc release);
+
+#ifdef __cplusplus
+}
+#endif
+
+// TODO clean the funtions below.
 
 extern "C"
 bool anyToBool (uno_Any * any);
