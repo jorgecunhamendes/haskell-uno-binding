@@ -221,7 +221,9 @@ void generateCode (EntityList const & entities) {
                 writeException(it->second);
                 break;
             case unoidl::Entity::SORT_INTERFACE_TYPE:
-                writeInterface(entities, it->second);
+                // do not generate code for 'com.sun.star.uno.XInterface'
+                if (it->second->type != "com.sun.star.uno.XInterface")
+                    writeInterface(entities, it->second);
                 break;
             case unoidl::Entity::SORT_SINGLE_INTERFACE_BASED_SERVICE:
                 writeSingleInterfaceBasedService(entities, it->second);
