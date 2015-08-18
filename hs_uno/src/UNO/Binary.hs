@@ -71,6 +71,9 @@ foreign import ccall "hsuno_any_getTypeName" anyGetTypeName
 foreign import ccall "hsuno_any_getValue" anyGetValue
   :: Ptr Any -> IO (Ptr a)
 
+foreign import ccall "uno_any_construct" anyConstruct
+  :: Ptr Any -> Ptr a -> Ptr b -> FunPtr (Ptr c -> IO ()) -> IO ()
+
 foreign import ccall "hsuno_any_destruct" anyDestruct
   :: Ptr Any -> FunPtr (Ptr a -> IO ()) -> IO ()
 
