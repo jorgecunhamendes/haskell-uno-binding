@@ -64,6 +64,14 @@ uStringToText ustrPtr = do
   len <- uStringGetLength ustrPtr
   T.fromPtr buf (fromIntegral len)
 
+withUString :: Text -> (Ptr UString -> IO a) -> IO a
+withUString text f = do
+  -- TODO handle exceptions
+  pUString <- uStringNew text
+  ret <- f pUString
+  uStringRelease pUString
+  return ret
+
 foreign import ccall unsafe "hsuno_uString_new" hsuno_uString_new
   :: Ptr Word16 -> Int32 -> IO (Ptr UString)
 
@@ -72,3 +80,9 @@ foreign import ccall unsafe "rtl_uString_getLength" uStringGetLength
 
 foreign import ccall unsafe "rtl_uString_getStr" uStringGetStr
   :: Ptr UString -> IO (Ptr Word16)
+
+foreign import ccall unsafe "rtl_uString_release" uStringRelease
+  :: Ptr UString -> IO ()
+
+foreign import ccall unsafe "&rtl_uString_release" uStringReleasePtr
+  :: FunPtr (Ptr UString -> IO ())
