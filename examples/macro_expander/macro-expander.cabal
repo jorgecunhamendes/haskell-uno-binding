@@ -26,3 +26,5 @@ executable macro-expander
   x-lo-sdk-types:
     com.sun.star.util.theMacroExpander
     com.sun.star.util.XMacroExpander
+    com.sun.star.uno.XInterface
+    com.sun.star.uno.XComponentContext

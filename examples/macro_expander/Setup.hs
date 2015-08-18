@@ -1,13 +1,15 @@
 import Distribution.Simple
 
-import Distribution.PackageDescription (PackageDescription (..), Library (..), Executable (..), BuildInfo (..))
+import Distribution.PackageDescription (PackageDescription (..), Library (..),
+           Executable (..), BuildInfo (..))
 import Distribution.Simple.LocalBuildInfo (LocalBuildInfo (..))
 import Distribution.Simple.Utils (die, getDirectoryContentsRecursive)
 
-import Control.Monad (void, when)
+import Control.Monad (void, when, unless)
 import Data.List (intercalate)
 import Data.Maybe (fromJust, isNothing)
-import System.Directory (createDirectoryIfMissing, doesFileExist, getCurrentDirectory)
+import System.Directory (createDirectoryIfMissing, doesFileExist,
+           getCurrentDirectory, getModificationTime)
 import System.Environment (lookupEnv)
 import System.FilePath ((</>), (<.>), takeExtension)
 import System.Process (system)
@@ -15,13 +17,24 @@ import System.Process (system)
 main :: IO ()
 main = defaultMainWithHooks simpleUserHooks { confHook = myConfHook }
 
-hs_unoidl_path = "../../hs_unoidl/hs_unoidl"
+typeDbs :: [FilePath]
+typeDbs =
+  [ "$LO_INSTDIR/program/types.rdb"
+  ]
 
+hsUnoidlPath :: String
+hsUnoidlPath = "../../hs_unoidl/hs_unoidl"
+
+unoExtraLibs :: [String]
 unoExtraLibs = ["stdc++", "uno_cppu", "uno_cppuhelpergcc3", "uno_sal"]
 
+cpputypesInclude :: FilePath -> FilePath
 cpputypesInclude builddir = builddir </> "include" </> "cpputypes"
+
+hsunoInclude :: String
 hsunoInclude = "../../hs_uno/src"
 
+loCxxOptions :: [String]
 loCxxOptions = words "-DCPPU_ENV=gcc3 -DHAVE_GCC_VISIBILITY_FEATURE -DLINUX -DUNX"
 
 myConfHook (pkg0, pbi) flags = do
@@ -29,8 +42,8 @@ myConfHook (pkg0, pbi) flags = do
     mLoInstallDir <- lookupEnv "LO_INSTDIR"
     when (isNothing mLoInstallDir) $
       die "LO_INSTDIR is not set"
-    hsunoidlExists <- doesFileExist hs_unoidl_path
-    when (not hsunoidlExists) $
+    hsunoidlExists <- doesFileExist hsUnoidlPath
+    unless hsunoidlExists $
       die "hs_unoidl not found"
     -- generate the default configuration
     lbi <- confHook simpleUserHooks (pkg0, pbi) flags
@@ -43,8 +56,9 @@ myConfHook (pkg0, pbi) flags = do
         exebi        = buildInfo exe
         custom_bi    = customFieldsBI exebi
         lo_types     = (lines . fromJust) (lookup "x-lo-sdk-types" custom_bi)
+        cabalFile    = unPackageName (pkgName $ package lpd) <.> "cabal"
     -- Generate needed types
-    makeTypes loInstallDir builddir lo_types
+    makeTypes cabalFile loInstallDir builddir typeDbs lo_types
     --
     cxxFilePaths <- findGeneratedCxxFiles
     let exebi' = exebi
@@ -61,7 +75,7 @@ myConfHook (pkg0, pbi) flags = do
           , extraLibs    = extraLibs    exebi ++ unoExtraLibs
           }
     let exe' = exe { buildInfo = exebi' }
-    let lpd' = lpd { executables = [exe'], extraSrcFiles = "gen" : (extraSrcFiles lpd) }
+    let lpd' = lpd { executables = [exe'], extraSrcFiles = "gen" : extraSrcFiles lpd }
     --
     return $ lbi { localPkgDescr = lpd' }
 
@@ -77,56 +91,51 @@ cxxTypesFlag = "cpputypes.cppumaker.flag"
 hsTypesFlag :: String
 hsTypesFlag = "hstypes.hs_unoidl.flag"
 
-makeTypes :: FilePath -> FilePath -> [String] -> IO ()
-makeTypes loInstallDir builddir types = do
+makeTypes :: FilePath -> FilePath -> FilePath -> [FilePath] -> [String] -> IO ()
+makeTypes cabalFile loInstallDir builddir typedbs types = do
     let cxxTypesFlagFile = builddir </> cxxTypesFlag
         hsTypesFlagFile = builddir </> hsTypesFlag
-    cxxTypesMade <- doesFileExist cxxTypesFlagFile
-    hsTypesMade  <- doesFileExist hsTypesFlagFile
+        out = cpputypesInclude builddir
+    cxxTypesMade <- cxxTypesFlagFile `isNewerThan` cabalFile
+    hsTypesMade  <- hsTypesFlagFile  `isNewerThan` cabalFile
     -- make C++ types
-    when (not cxxTypesMade) $ do
-        let out = cpputypesInclude builddir
-            typelist = "-T" ++ intercalate ";" types
-            typedb = "$LO_INSTDIR/program/types.rdb"
+    unless cxxTypesMade $ do
+        let typelist = "-T" ++ intercalate ";" types
         putStrLn "Building required LibreOffice SDK C++ types"
         createDirectoryIfMissing True out
-        cppumaker ("-O" ++ out) typelist typedb
+        cppumaker ("-O" ++ out) typelist typedbs
         touch cxxTypesFlagFile
     -- make Haskell types
-    when (not hsTypesMade) $ do
-        let out = cpputypesInclude builddir
-            typelist = unwords types
-            typedb = "$LO_INSTDIR/program/types.rdb"
+    unless hsTypesMade $ do
+        let typelist = "-T" ++ intercalate ":" types
         putStrLn "Building required LibreOffice SDK Haskell types"
         createDirectoryIfMissing True out
-        hs_unoidl loInstallDir typelist
+        hs_unoidl loInstallDir typelist typedbs
         touch hsTypesFlagFile
     return ()
 
-cppumaker :: String -> String -> String -> IO ()
-cppumaker out typelist typedb = void $ system ("$LO_INSTDIR/sdk/bin/cppumaker " ++ args)
-  where args = unwords $ map quote [out, typelist, typedb]
+cppumaker :: String -> String -> [FilePath] -> IO ()
+cppumaker out typelist typedbs = void $ system ("$LO_INSTDIR/sdk/bin/cppumaker " ++ args)
+  where args = unwords $ map quote (out : typelist : typedbs)
         quote s = "\"" ++ s ++ "\""
 
-hs_unoidl :: FilePath -> String -> IO ()
-hs_unoidl loInstallDir typelist = void $ system (cmd ++ ' ' : args)
+hs_unoidl :: FilePath -> String -> [String] -> IO ()
+hs_unoidl loInstallDir typelist typedbs = void $ system (cmd ++ ' ' : args)
   where cmd = "LD_LIBRARY_PATH='"
-              ++ loInstallDir ++ "/program' " ++ hs_unoidl_path
-        args = unwords (basepath : typepaths)
-        basepath = loInstallDir </> "sdk" </> "idl"
-        typepaths = map quote
-                    $ map (unoTypeToPath basepath)
-                    $ words typelist
+              ++ loInstallDir ++ "/program' " ++ hsUnoidlPath
+        args = unwords $ map quote (typelist : typedbs)
         quote s = "\"" ++ s ++ "\""
 
 touch :: FilePath -> IO ()
 touch path = void $ system ("touch \"" ++ path ++ "\"")
 
-unoTypeToPath :: FilePath -> String -> FilePath
-unoTypeToPath basepath t = basepath </> tpath <.> "idl"
-  where tpath = replace '.' '/' t -- FIXME split on points and join using </>
-
-replace :: Char -> Char -> String -> String
-replace c0 c1 = map aux
-  where aux c' | c' == c0 = c1
-               | otherwise = c'
+isNewerThan :: FilePath -> FilePath -> IO Bool
+isNewerThan f1 f2 = do
+  exists1 <- doesFileExist f1
+  exists2 <- doesFileExist f2
+  if exists1 && exists2
+    then do
+      t1 <- getModificationTime f1
+      t2 <- getModificationTime f2
+      return (t1 > t2)
+    else return False
