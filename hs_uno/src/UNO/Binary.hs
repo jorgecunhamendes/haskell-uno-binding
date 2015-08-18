@@ -33,6 +33,9 @@ unoBootstrap = do
 foreign import ccall "bootstrap" cUnoBootstrap
   :: Int -> Ptr CString -> IO ContextPtr
 
+foreign import ccall "hsunoGetSingletonFromContext" hsunoGetSingletonFromContext
+  :: Ptr UString -> Ptr Context -> Ptr Any -> IO ()
+
 -- *Any
 
 data UNOAny

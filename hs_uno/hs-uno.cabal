@@ -17,6 +17,7 @@ library
                      , UNO.Any
                      , UNO.Binary
                      , UNO.Reference
+                     , UNO.Singleton
                      , UNO.Service
                      , UNO.Text
                      , UNO.Types

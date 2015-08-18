@@ -105,6 +105,21 @@ uno_Interface * hsunoCreateInstanceWithContextFromAscii (
 }
 
 extern "C"
+void hsunoGetSingletonFromContext (
+    rtl_uString * sSingletonSpecifier, uno_Interface * pContext, uno_Any * result)
+{
+    void * arguments [1];
+    arguments[0] = &sSingletonSpecifier;
+    uno_Any exception;
+    uno_Any * pException = &exception;
+    makeBinaryUnoCall(pContext,
+        "com.sun.star.uno.XComponentContext::getValueByName", result,
+        arguments, &pException);
+    assert(pException == 0); // TODO handle exception
+    return;
+}
+
+extern "C"
 void makeBinaryUnoCall(
     uno_Interface * interface, char const * methodType, void * result,
     void ** arguments, uno_Any ** exception)
