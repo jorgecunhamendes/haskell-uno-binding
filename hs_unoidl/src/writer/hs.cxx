@@ -359,16 +359,38 @@ void HsWriter::writeSingleInterfaceBasedServiceEntity () {
     }
 }
 
+void HsWriter::writeInterfaceBasedSingletonEntity () {
+    rtl::Reference<unoidl::InterfaceBasedSingletonEntity> ent (
+            static_cast<unoidl::InterfaceBasedSingletonEntity *>(entity->unoidl.get()));
+    OUString entityName (entity->getName());
+    OUString entityNameCapitalized (capitalize(entityName));
+    OUString sEntityBase (ent->getBase());
+    OUString hsMethodName (decapitalize(entityName) + "Get");
+    vector< OUString > classes;
+    vector< Parameter > methodParams;
+    methodParams.push_back({ OUString("com.sun.star.uno.XComponentContext"),
+            OUString("rContext") });
+    OUString methodType (sEntityBase);
+
+    writeFunctionType(hsMethodName, classes, methodParams, methodType);
+
+    out << std::endl;
+    writeFunctionLHS(hsMethodName, methodParams);
+    out << " unoGetSingletonFromContext \"" << entity->type << "\" rContext"
+        << std::endl;
+}
+
 void HsWriter::writeModule () {
     assert(hasEntityList);
 
     for (EntityList::const_iterator it (entities.begin()) ;
             it != entities.end() ; ++it)
     {
+        OUString name (capitalize(it->second->getName()));
         out << std::endl;
-        out << "data " << it->second->getName() << std::endl;
+        out << "data " << name << std::endl;
         if (it->second->isInterface()) {
-            out << "instance IsUnoType " << it->second->getName() << " where"
+            out << "instance IsUnoType " << name << " where"
                 << std::endl;
             indent(4);
             out << "getUnoTypeClass _ = Typelib_TypeClass_INTERFACE"
@@ -431,6 +453,16 @@ set< OUString > HsWriter::singleInterfaceBasedServiceEntityDependencies () {
     set< OUString > deps;
     rtl::Reference<unoidl::SingleInterfaceBasedServiceEntity> ent (
             static_cast<unoidl::SingleInterfaceBasedServiceEntity *>(entity->unoidl.get()));
+    deps.insert(Module(ent->getBase()).getParent().getNameCapitalized());
+    deps.insert(Module(ent->getBase()).getNameCapitalized());
+    deps.insert("Com.Sun.Star.Uno");
+    return deps;
+}
+
+set< OUString > HsWriter::interfaceBasedSingletonEntityDependencies () {
+    set< OUString > deps;
+    rtl::Reference<unoidl::InterfaceBasedSingletonEntity> ent (
+            static_cast<unoidl::InterfaceBasedSingletonEntity *>(entity->unoidl.get()));
     deps.insert(Module(ent->getBase()).getParent().getNameCapitalized());
     deps.insert(Module(ent->getBase()).getNameCapitalized());
     deps.insert("Com.Sun.Star.Uno");

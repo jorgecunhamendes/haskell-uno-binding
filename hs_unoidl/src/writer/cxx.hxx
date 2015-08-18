@@ -28,6 +28,7 @@ class CxxWriter : public Writer {
         void writePlainStructTypeEntity ();
         void writeInterfaceTypeEntity ();
         void writeSingleInterfaceBasedServiceEntity ();
+        void writeInterfaceBasedSingletonEntity ();
 };
 
 #endif /* HSUNOIDL_WRITER_CXX_HXX */

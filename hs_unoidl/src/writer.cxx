@@ -115,9 +115,21 @@ void writeSingleInterfaceBasedService (EntityList const & entities,
 
     // hs
     OUString hsFilePath = filePath + hsFileExtension;
-    HsWriter hs (File::getFileUrlFromPath(hsFilePath), entity);
+    HsWriter hs (File::getFileUrlFromPath(hsFilePath), entity, entities);
     hs.writeOpening(hs.singleInterfaceBasedServiceEntityDependencies());
     hs.writeSingleInterfaceBasedServiceEntity();
+}
+
+void writeInterfaceBasedSingleton (EntityList const & entities,
+        EntityRef const & entity)
+{
+    const OUString filePath ("gen/" + Module(entity->type).asPathCapitalized());
+
+    // hs
+    OUString hsFilePath = filePath + hsFileExtension;
+    HsWriter hs (File::getFileUrlFromPath(hsFilePath), entity, entities);
+    hs.writeOpening(hs.interfaceBasedSingletonEntityDependencies());
+    hs.writeInterfaceBasedSingletonEntity();
 }
 
 void writeModule (ModuleList const & modules, const EntityRef & entity) {

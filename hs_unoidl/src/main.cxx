@@ -228,6 +228,9 @@ void generateCode (EntityList const & entities) {
             case unoidl::Entity::SORT_SINGLE_INTERFACE_BASED_SERVICE:
                 writeSingleInterfaceBasedService(entities, it->second);
                 break;
+            case unoidl::Entity::SORT_INTERFACE_BASED_SINGLETON:
+                writeInterfaceBasedSingleton(entities, it->second);
+                break;
             default:
                 std::cout << "Warning: entity not yet supported ["
                     << it->second->unoidl->getSort() << "]" << std::endl;

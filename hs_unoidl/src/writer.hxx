@@ -20,11 +20,10 @@ void writeException (EntityRef const & entity);
 void writeSingleInterfaceBasedService (EntityList const & entities,
         EntityRef const & entity);
 
+void writeInterfaceBasedSingleton (EntityList const & entities,
+        EntityRef const & entity);
+
 void writeModule (ModuleList const & modules, const EntityRef & entity);
-
-//void writeInterfaceBasedSingleton (EntityRef const & entity);
-
-//void writeServiceBasedSingleton (EntityRef const & entity);
 
 #endif /* HSUNOIDL_WRITER_HXX */
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

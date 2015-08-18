@@ -45,14 +45,17 @@ class HsWriter : public Writer {
         void writeInterfaceTypeEntity ();
         // - exception type
         void writeExceptionTypeEntity ();
-        // - single-interface-based service type
+        // - single-interface-based service
         void writeSingleInterfaceBasedServiceEntity ();
+        // - interface-based singleton
+        void writeInterfaceBasedSingletonEntity ();
         // UNO Entity module
         void writeModule ();
         // auxiliary methods
         std::set< rtl::OUString > plainStructTypeEntityDependencies ();
         std::set< rtl::OUString > interfaceTypeEntityDependencies ();
         std::set< rtl::OUString > singleInterfaceBasedServiceEntityDependencies ();
+        std::set< rtl::OUString > interfaceBasedSingletonEntityDependencies ();
 };
 
 #endif /* HSUNOIDL_WRITER_HS_HXX */
