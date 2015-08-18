@@ -6,10 +6,9 @@ module UNO.Types where
 import UNO.Text
 
 import Data.Int
-import Data.Text (Text, unpack)
+import Data.Text (Text)
 import qualified Data.Text as T (append)
 import Foreign
-import Foreign.C
 
 data CSequence a
 
@@ -20,6 +19,18 @@ class IsUnoType a where
   getUnoTypeName  :: a -> Text
   getUnoType      :: a -> IO TypeDescriptionPtr
   getUnoType v = getTypeDescription (getUnoTypeName v)
+
+instance IsUnoType Bool where
+  getUnoTypeClass _ = Typelib_TypeClass_BOOLEAN
+  getUnoTypeName  _ = "boolean"
+
+instance IsUnoType Char where
+  getUnoTypeClass _ = Typelib_TypeClass_SHORT
+  getUnoTypeName  _ = "char"
+
+instance IsUnoType Word8 where
+  getUnoTypeClass _ = Typelib_TypeClass_BYTE
+  getUnoTypeName  _ = "byte"
 
 instance IsUnoType Int16 where
   getUnoTypeClass _ = Typelib_TypeClass_SHORT
@@ -44,6 +55,18 @@ instance IsUnoType Int64 where
 instance IsUnoType Word64 where
   getUnoTypeClass _ = Typelib_TypeClass_UNSIGNED_HYPER
   getUnoTypeName  _ = "unsigned hyper"
+
+instance IsUnoType Float where
+  getUnoTypeClass _ = Typelib_TypeClass_FLOAT
+  getUnoTypeName  _ = "float"
+
+instance IsUnoType Double where
+  getUnoTypeClass _ = Typelib_TypeClass_DOUBLE
+  getUnoTypeName  _ = "double"
+
+instance IsUnoType UString where
+  getUnoTypeClass _ = Typelib_TypeClass_STRING
+  getUnoTypeName  _ = "string"
 
 instance IsUnoType OUString where
   getUnoTypeClass _ = Typelib_TypeClass_STRING
