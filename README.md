@@ -10,6 +10,9 @@ It consists on three parts:
      necessary code to call the API; and,
    - `examples` showing different ways to use the binding.
 
+Information on how to build a cabal package that uses the UNO API is provided
+in the `README` of the `hs-uno` package.
+
 ## Running an Example
 
 To run an example, `hs_unoidl` needs to be compiled first and then the example
