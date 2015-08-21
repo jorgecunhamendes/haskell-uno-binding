@@ -183,7 +183,9 @@ void CxxWriter::writeInterfaceTypeEntity () {
             } else if (isStringType(k->type)) {
                 out << "const_cast<rtl_uString **>(&" << k->name << "->pData)";
             } else {
-                // TODO test non-primitive type arguments
+                EntityList::const_iterator entIt = entities.find(k->type);
+                if (entIt != entities.end() && entIt->second->isInterface())
+                    out << "&";
                 out << k->name;
             }
             out << ";" << std::endl;
