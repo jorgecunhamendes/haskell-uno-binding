@@ -50,3 +50,7 @@ cabal-install-1.22.2.0, and text-1.2.1.1.
 **Note 4**: If the binaries in the installation directory were not made with
 `--dbg-utils` enabled, remove the line containing `-D_GLIBCXX_DEBUG` from
 `hs_unoidl/Makefile`.
+
+---
+
+*Original repository:* https://github.com/jorgecunhamendes/haskell-uno-binding
