@@ -1,0 +1,37 @@
+name:                swriter
+version:             0.1.0.0
+synopsis:            Based on 'SWriter.java' from the LibreOffice examples.
+-- description:
+license:             MPL-2.0
+license-file:        LICENSE
+author:              Jorge Mendes
+maintainer:          jorgecunhamendes@gmail.com
+-- copyright:           
+-- category:            
+build-type:          Custom
+-- extra-source-files:  
+cabal-version:       >=1.10
+extra-tmp-files:     gen
+
+executable swriter
+  main-is:             Main.hs
+  default-extensions:  OverloadedStrings
+  hs-source-dirs:      .
+  build-depends:       base >=4.6, text, hs-uno
+  default-language:    Haskell2010
+  x-lo-sdk-types:
+    com.sun.star.uno.XInterface
+    com.sun.star.uno.XComponentContext
+    com.sun.star.beans.XPropertySet
+    com.sun.star.bridge.UnoUrlResolver
+    com.sun.star.bridge.XUnoUrlResolver
+    com.sun.star.container.XIndexAccess
+    com.sun.star.frame.Desktop
+    com.sun.star.frame.XComponentLoader
+    com.sun.star.frame.XDesktop2
+    com.sun.star.lang.XMultiServiceFactory
+    com.sun.star.text.XSimpleText
+    com.sun.star.text.XText
+    com.sun.star.text.XTextCursor
+    com.sun.star.text.XTextDocument
+    com.sun.star.text.XTextTable
