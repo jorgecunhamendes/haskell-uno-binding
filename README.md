@@ -23,6 +23,8 @@ example *macro-expander*, are:
 # required environment variables
 export LO_INSTDIR=/path/to/libreoffice/installation/directory
 export LO_SRC=/path/to/libreoffice/source/code
+# at least with the GCC toolchain on Fedora 22, also set:
+export LD_RUN_PATH=$LO_INSTDIR/program
 # clone the repository
 git clone git@github.com:jorgecunhamendes/haskell-uno-binding.git
 # compile hs_unoidl
@@ -34,6 +36,8 @@ cd examples/macro_expander/
 cabal sandbox init                    # create a sandbox for the example's dependencies
 cabal sandbox add-source ../../hs_uno # add hs_uno to the sandbox
 cabal install --only-dependencies     # install the dependencies
+ # if the above fails with "The package list for 'hackage.haskell.org' does not
+ # exist" then run "cabal update"
 cabal configure                       # configure the example
 cabal build                           # build it
 cabal run                             # run it
