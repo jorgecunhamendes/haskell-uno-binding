@@ -56,7 +56,7 @@ myConfHook (pkg0, pbi) flags = do
         exebi        = buildInfo exe
         custom_bi    = customFieldsBI exebi
         lo_types     = (lines . fromJust) (lookup "x-lo-sdk-types" custom_bi)
-        cabalFile    = unPackageName (pkgName $ package lpd) <.> "cabal"
+        cabalFile    = "macro-expander.cabal"
     -- Generate needed types
     makeTypes cabalFile loInstallDir builddir typeDbs lo_types
     --
