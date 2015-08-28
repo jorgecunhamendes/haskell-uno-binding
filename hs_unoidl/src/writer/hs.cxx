@@ -17,6 +17,11 @@ using std::vector;
 using std::set;
 using rtl::OUString;
 
+bool typeIsInterface (EntityList const & entities, OUString const & type) {
+    EntityList::const_iterator entIt = entities.find(type);
+    return entIt != entities.end() && entIt->second->isInterface();
+}
+
 void HsWriter::writeOpening (set< OUString > const & deps) {
     out << "{-# LANGUAGE OverloadedStrings #-} " << std::endl;
     out << "module " << Module(entity->type).getNameCapitalized()
@@ -196,13 +201,7 @@ void HsWriter::writeInterfaceTypeEntity () {
                     << std::endl;
                 level += 2;
             } else {
-                bool argIsInterface = false;
-                {
-                    EntityList::const_iterator entIt = entities.find(argType);
-                    if (entIt != entities.end() && entIt->second->isInterface())
-                        argIsInterface = true;
-                }
-                if (argIsInterface) {
+                if (typeIsInterface(entities, argType)) {
                     OUString s ("p" + name);
                     arguments.push_back(s);
                     indent(level);
