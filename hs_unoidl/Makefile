@@ -69,11 +69,11 @@ out/writer.cxx_o : src/writer.cxx src/writer.hxx \
 	src/writer/cxx.hxx src/writer/hxx.hxx src/writer/hs.hxx
 out/writer/utils.cxx_o : src/writer/utils.cxx src/writer/utils.hxx | out/writer
 out/writer/cxx.cxx_o : src/writer/cxx.cxx src/writer/cxx.hxx \
-	src/writer/writer.hxx | out/writer
+	src/writer/writer.hxx src/types.hxx | out/writer
 out/writer/hxx.cxx_o : src/writer/hxx.cxx src/writer/hxx.hxx \
-	src/writer/writer.hxx | out/writer
+	src/writer/writer.hxx src/types.hxx | out/writer
 out/writer/hs.cxx_o : src/writer/hs.cxx src/writer/hs.hxx \
-	src/writer/writer.hxx | out/writer
+	src/writer/writer.hxx src/types.hxx | out/writer
 out/file.cxx_o : src/file.cxx src/file.hxx
 out/entity.cxx_o : src/entity.cxx src/entity.hxx
 out/module.cxx_o : src/module.cxx src/module.hxx
