@@ -19,7 +19,7 @@ import Com.Sun.Star.Container.XIndexAccess
 import Com.Sun.Star.Frame.Desktop
 import Com.Sun.Star.Frame.XComponentLoader
 import Com.Sun.Star.Lang.XMultiServiceFactory
--- import Com.Sun.Star.Table.XCell
+import Com.Sun.Star.Table.XCell
 import Com.Sun.Star.Text
 import Com.Sun.Star.Text.XSimpleText
 import Com.Sun.Star.Text.XText
@@ -97,14 +97,20 @@ insertTable xTextDocument = do
   insertIntoCell xTextTable "C1" "Third Column"
   insertIntoCell xTextTable "D1" "SUM"
   -- insert first row
-  --(`setValue` 12.3)            =<< getCellByName "A2" xTextTable
-  --(`setValue` 4567.8)          =<< getCellByName "B2" xTextTable
-  --(`setValue` (negate 910.11)) =<< getCellByName "C2" xTextTable
-  --(`setFormula` "sum <A2:C2>") =<< getCellByName "D2" xTextTable
+  (`setValue` 12.3)            =<< getCellByName xTextTable "A2"
+  (`setValue` 4567.8)          =<< getCellByName xTextTable "B2"
+  (`setValue` (negate 910.11)) =<< getCellByName xTextTable "C2"
+  (`setFormula` "sum <A2:C2>") =<< getCellByName xTextTable "D2"
   -- insert second row
-  -- TODO
+  (`setValue` 11.10)           =<< getCellByName xTextTable "A3"
+  (`setValue` 987.65)          =<< getCellByName xTextTable "B3"
+  (`setValue` 4.321)           =<< getCellByName xTextTable "C3"
+  (`setFormula` "sum <A3:C3>") =<< getCellByName xTextTable "D3"
   -- insert third row
-  -- TODO
+  (`setValue` 0)               =<< getCellByName xTextTable "A4"
+  (`setValue` (negate 3))      =<< getCellByName xTextTable "B4"
+  (`setValue` (negate 9))      =<< getCellByName xTextTable "C4"
+  (`setFormula` "sum <A4:C4>") =<< getCellByName xTextTable "D4"
 
 --
 -- ****************************************************************************
