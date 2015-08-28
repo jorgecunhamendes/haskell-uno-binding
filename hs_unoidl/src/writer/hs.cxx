@@ -81,10 +81,10 @@ void HsWriter::writeFunctionType (OUString & fname,
     }
     for (vector< Parameter >::const_iterator it (params.begin())
             ; it != params.end() ; ++it)
-        out << toHsType(it->type) << " -> ";
+        out << toHsType(it->type, typeIsInterface(entities, it->type)) << " -> ";
     if (io)
         out << "IO ";
-    out << toHsType(rtype);
+    out << toHsType(rtype, typeIsInterface(entities, rtype));
 }
 
 void HsWriter::writeFunctionLHS (OUString & fname, vector< Parameter > & params)

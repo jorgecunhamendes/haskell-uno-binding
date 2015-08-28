@@ -19,7 +19,7 @@ bool isPrimitiveType (rtl::OUString const & type);
 bool isStringType (rtl::OUString const & type);
 bool isSequenceType (rtl::OUString const & type);
 rtl::OUString toCppType (rtl::OUString const & name);
-rtl::OUString toHsType (rtl::OUString const & name);
+rtl::OUString toHsType (rtl::OUString const & name, bool isInterface = false);
 rtl::OUString toHsCppType (rtl::OUString const & name);
 rtl::OUString hsTypeCxxPrefix (rtl::OUString const & type);
 rtl::OUString toFunctionPrefix (rtl::OUString const & name);

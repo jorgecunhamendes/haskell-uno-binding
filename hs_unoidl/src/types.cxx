@@ -81,7 +81,7 @@ OUString toCppType (OUString const & name)
     return result;
 }
 
-OUString toHsType (OUString const & name)
+OUString toHsType (OUString const & name, bool isInterface)
 {
     if (name.compareTo("hsuno ", 6) == 0)
         return name.copy(6);
@@ -105,8 +105,10 @@ OUString toHsType (OUString const & name)
     } else if (isSequenceType(name)) {
         result = "(Ptr (CSequence ()))";
         //result = "(Ptr (CSequence " + toHsType(name.copy(2)) + "))";
-    } else {
+    } else if (isInterface) {
         result = "(Reference " + Module(name).getNameCapitalized() + ")";
+    } else {
+        result = "(Ptr " + Module(name).getNameCapitalized() + ")";
     }
     return result;
 }
