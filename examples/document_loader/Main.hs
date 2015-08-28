@@ -1,5 +1,6 @@
 --
 -- Running the example:
+-- $ ../startlo.sh
 -- $ cabal run -- "file://$LO_INSTDIR/sdk/examples/cpp/DocumentLoader/test.odt" "-env:URE_MORE_TYPES=file://$LO_INSTDIR/program/types/offapi.rdb"
 --
 {-# LANGUAGE OverloadedStrings #-}
